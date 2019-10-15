@@ -80,7 +80,7 @@ function [perf, result, testlabel] = mv_classify(cfg, X, clabel)
 %                provided. (default: identity matrix). Note: this
 %                corresponds to the GRAPH option in mv_searchlight.
 %                There is no separate parameter for neighbourhood size, the
-%                size of the neibhbourhood is specified by the matrix.
+%                size of the neighbourhood is specified by the matrix.
 %
 % CROSS-VALIDATION parameters:
 % .cv           - perform cross-validation, can be set to 'kfold',
