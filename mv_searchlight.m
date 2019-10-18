@@ -150,9 +150,9 @@ for ff=1:nfeatures
     
     if cfg.feedback
         if numel(nb)>1
-            fprintf('Classifying using feature %d with neighbours %s\n', ff, mat2str(setdiff(nb,ff)))
+            fprintf('Classifying using %s %d with neighbours %s\n', cfg.dimension_names{2}, ff, mat2str(setdiff(nb,ff)))
         else
-            fprintf('Classifying using feature %d with no neighbours\n', ff)
+            fprintf('Classifying using %s %d with no neighbours\n', cfg.dimension_names{2}, ff)
         end
     end
     

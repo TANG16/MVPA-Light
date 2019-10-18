@@ -1,6 +1,6 @@
 function cf = train_multiclass_lda(param,X,clabel)
 % Trains a multi-class linear discriminant analysis (LDA) classifier with 
-% shrinkage regularisation of the within-class scatter matrix. Multi-class
+% shrinkage regularization of the within-class scatter matrix. Multi-class
 % LDA can be seen as a prototype classifier: First, the data is mapped
 % onto a (C-1)-dimensional discriminative subspace, where C is the number
 % of classes. Then, a sample is assigned to the class that has the closest
@@ -18,22 +18,22 @@ function cf = train_multiclass_lda(param,X,clabel)
 %                  1's (class 1), 2's (class 2), 3's (class 3) and so on
 %
 % param          - struct with hyperparameters:
-% .reg          - type of regularisation
-%                 'shrink': shrinkage regularisation using (1-lambda)*C +
+% .reg          - type of regularization
+%                 'shrink': shrinkage regularization using (1-lambda)*C +
 %                          lambda*nu*I, where nu = trace(C)/P and P =
 %                          number of features. nu assures that the trace of
-%                          C is equal to the trace of the regularisation
+%                          C is equal to the trace of the regularization
 %                          term. 
-%                 'ridge': ridge-type regularisation of C + lambda*I,
+%                 'ridge': ridge-type regularization of C + lambda*I,
 %                          where C is the covariance matrix and I is the
 %                          identity matrix
 %                  (default 'shrink')
-% .lambda        - if reg='shrink', the regularisation parameter ranges 
-%                  from 0 to 1 (where 0=no regularisation and 1=maximum
-%                  regularisation). If 'auto' then the shrinkage 
-%                  regularisation parameter is calculated automatically 
+% .lambda        - if reg='shrink', the regularization parameter ranges 
+%                  from 0 to 1 (where 0=no regularization and 1=maximum
+%                  regularization). If 'auto' then the shrinkage 
+%                  regularization parameter is calculated automatically 
 %                  using the Ledoit-Wolf formula(function cov1para.m). 
-%                  If reg='ridge', lambda ranges from 0 (no regularisation)
+%                  If reg='ridge', lambda ranges from 0 (no regularization)
 %                  to infinity.
 %
 %Output:
@@ -70,33 +70,33 @@ for c=1:nclasses
     Sw = Sw + (nc(c)-1) * cov(X(clabel==c,:));
 end
 
-%% Regularisation
+%% Regularization
 lambda = param.lambda;
 
 if strcmp(param.reg,'shrink')
-    % SHRINKAGE REGULARISATION
+    % SHRINKAGE REGULARIZATION
     if (ischar(lambda)&&strcmp(lambda,'auto'))
-        % Here we use the Ledoit-Wolf method to estimate the regularisation
+        % Here we use the Ledoit-Wolf method to estimate the regularization
         % parameter analytically. 
         % Get samples from each class separately and correct by the class
         % means using bsxfun.
         for c=1:nclasses
             X(clabel==c,:) = bsxfun(@minus,X(clabel==c,:),centroid(c,:));
         end
-        [~, lambda]= cov1para(X);
+        lambda= LedoitWolfEstimate(X,'primal');
     end
-    % We write the regularised scatter matrix as a convex combination of
+    % We write the regularized scatter matrix as a convex combination of
     % the empirical scatter Sw and an identity matrix scaled to have
     % the same trace as Sw
     Sw = (1-lambda)* Sw + lambda * eye(nfeatures) * trace(Sw)/nfeatures;
 
 else
-    % RIDGE REGULARISATION
+    % RIDGE REGULARIZATION
     % The ridge lambda must be provided directly as a number
     Sw = Sw + lambda * eye(nfeatures);
 end
 
-%% Solve generalised eigenvalue problem to obtain discriminative subspace
+%% Solve generalized eigenvalue problem to obtain discriminative subspace
 [W,D] = eig(Sb, Sw, 'vector');
 [~, so] = sort(D,'descend');
 W = W(:,so(1:min(nclasses, nfeatures+1)-1));

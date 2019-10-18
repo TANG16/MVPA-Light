@@ -52,7 +52,7 @@ for c=1:nclasses
     Sw = Sw + (nc(c)-1) * cov(X(clabel==c,:));
 end
 
-actual = cf.W' * Sw * cf.W;
+actual = (cf.W' * Sw * cf.W)/ (nsamples-1);
 expect = eye(nclasses-1);
 
 print_unittest_result('W''*Sw*W - I = 0',0, norm(actual-expect), tol);

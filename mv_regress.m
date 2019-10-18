@@ -1,45 +1,39 @@
-function [perf, result, testlabel] = mv_classify(cfg, X, clabel)
-% Classification of multi-dimensional data.
-%
-% mv_classify allows for the classification of data of arbitrary number and
-% order of dimensions. It combines and generalizes the capabilities of the 
-% other high-level functions (mv_crossvalidate, mv_searchlight,
-% mv_classify_across_time, mv_classify_timextime).
-%
-% It is most useful for multi-dimensional datasets such as time-frequency
-% data e.g. [samples x channels x frequencies x time points] which do not
-% work well with the other, more specialised high-level functions.
+function [perf, result] = mv_regress(cfg, X, Y)
+% Regression of multi-dimensional data. The interface is very similar to 
+% that of mv_classify.
 %
 % Usage:
-% [perf, res] = mv_classify(cfg, X, clabel)
+% [perf, res] = mv_regress(cfg, X, y)
 %
 %Parameters:
 % X              - [... x ... x ... x ] data matrix or kernel matrix of
 %                  arbitrary dimensions
-% clabel         - [samples x 1] vector of class labels
+% Y              - [samples x 1] vector of responses (for univariate
+%                                regression) -or- 
+%                  [samples x m] matrix of responses (for multivariate 
+%                                regression with m response variables)
 %
 % cfg          - struct with optional parameters:
-% .classifier     - name of classifier, needs to have according train_ and test_
-%                   functions (default 'lda')
-% .hyperparameter - struct with parameters passed on to the classifier train
+% .model          - name of regression model, needs to have according train_ and test_
+%                   functions (default 'linreg')
+% .hyperparameter - struct with parameters passed on to the model train
 %                   function (default [])
-% .metric         - classifier performance metric, default 'accuracy'. See
+% .metric         - regression performance metric, default 'mean_squared_error'. See
 %                   mv_classifier_performance. If set to [] or 'none', the 
-%                   raw classifier output (labels, dvals or probabilities 
-%                   depending on cfg.output_type) for each sample is returned. 
-%                   Use cell array to specify multiple metrics (eg
-%                    {'accuracy' 'auc'}
+%                   raw model output y_hat (predicted responses) for each 
+%                   sample is returned. Use cell array to specify multiple 
+%                   metrics (eg {'mae' 'mse'}).
 % .feedback       - print feedback on the console (default 1)
 %
-% For mv_classify to make sense of the data, the user must specify the
+% For mv_regress to make sense of the data, the user must specify the
 % meaning of each dimension. sample_dimension and feature_dimension
 % specify which dimension(s) code for samples and features, respectively.
 % All other dimensions will be treated as 'search' dimensions and a
-% separate classification will be performed for each element of these
+% separate regression will be performed for each element of these
 % dimensions. Example: let the data matrix be [samples x time x features x
 % frequencies]. Let sample_dimension=1 and feature_dimension=3. The output
 % of mv_classify will then be a [time x frequencies] (corresponding to
-% dimensions 2 and 4) matrix of classification results.
+% dimensions 2 and 4) matrix of regression results.
 % To use generalization (e.g. time x time, or frequency x frequency), set
 % the generalization_dimension parameter. 
 % 
@@ -49,7 +43,7 @@ function [perf, result, testlabel] = mv_classify(cfg, X, clabel)
 %                      It cannot have more than 2 elements.
 % .feature_dimension - the data dimension(s) that code the features (default
 %                      2). There can be more than 1 feature dimension, but
-%                      then a classifier must be used that can deal with
+%                      then a model must be used that can deal with
 %                      multi-dimensional inputs. If a kernel matrix is
 %                      provided, there cannot be a feature dimension.
 % .generalization_dimension - any of the other (non-sample, non-feature) 
@@ -80,7 +74,7 @@ function [perf, result, testlabel] = mv_classify(cfg, X, clabel)
 %                provided. (default: identity matrix). Note: this
 %                corresponds to the GRAPH option in mv_searchlight.
 %                There is no separate parameter for neighbourhood size, the
-%                size of the neighbourhood is specified by the matrix.
+%                size of the neibhbourhood is specified by the matrix.
 %
 % CROSS-VALIDATION parameters:
 % .cv           - perform cross-validation, can be set to 'kfold',
@@ -88,8 +82,6 @@ function [perf, result, testlabel] = mv_classify(cfg, X, clabel)
 % .k            - number of folds in k-fold cross-validation (default 5)
 % .p            - if cv is 'holdout', p is the fraction of test samples
 %                 (default 0.1)
-% .stratify     - if 1, the class proportions are approximately preserved
-%                 in each fold (default 1)
 % .repeat       - number of times the cross-validation is repeated with new
 %                 randomly assigned folds (default 1)
 %
@@ -106,22 +98,22 @@ function [perf, result, testlabel] = mv_classify(cfg, X, clabel)
 %                 perf is a cell array
 % result        - struct with fields describing the classification result.
 %                 Can be used as input to mv_statistics and mv_plot_result
-% testlabel     - cell array of test labels. Can be useful if metric='none'
 
 % (c) matthias treder
 
 X = double(X);
 
-mv_set_default(cfg,'classifier','lda');
+mv_set_default(cfg,'model','ridge');
 mv_set_default(cfg,'hyperparameter',[]);
-mv_set_default(cfg,'metric','accuracy');
+mv_set_default(cfg,'metric','mean_absolute_error');
+mv_set_default(cfg,'add_intercept',1);
 mv_set_default(cfg,'feedback',1);
 
 mv_set_default(cfg,'sample_dimension',1);
-mv_set_default(cfg,'feature_dimension',[]);
+mv_set_default(cfg,'feature_dimension',2);
 mv_set_default(cfg,'generalization_dimension',[]);
 mv_set_default(cfg,'flatten_features',1);
-mv_set_default(cfg,'dimension_names',strcat('dim', arrayfun(@(x) {num2str(x)}, 1:ndims(X))));
+mv_set_default(cfg,'dimension_names',repmat({''}, [1, ndims(X)]));
 
 mv_set_default(cfg,'neighbours',{});
 if isempty(cfg.neighbours), cfg.neighbours = {}; end  % replace [] by {}
@@ -132,7 +124,8 @@ mv_set_default(cfg,'preprocess',{});
 mv_set_default(cfg,'preprocess_param',{});
 
 % mv_check_inputs assumes samples are in dimension 1 so need to permute
-[cfg, clabel, nclasses, nmetrics] = mv_check_inputs(cfg, permute(X,[cfg.sample_dimension, setdiff(1:ndims(X), cfg.sample_dimension)]), clabel);
+[cfg, Y, nmetrics] = mv_check_inputs_for_regression(cfg, X, Y);
+% [cfg, Y, nmetrics] = mv_check_inputs_for_regression(cfg, permute(X,[cfg.sample_dimension, setdiff(1:ndims(X), cfg.sample_dimension)]), Y);
 
 % sort dimension vectors
 sample_dim = sort(cfg.sample_dimension);
@@ -142,9 +135,6 @@ gen_dim = cfg.generalization_dimension;
 % define non-sample/feature dimension(s) that will be used for search/looping
 search_dim = setdiff(1:ndims(X), [sample_dim, feature_dim]);
 
-% Number of samples in the classes
-n = arrayfun( @(c) sum(clabel==c) , 1:nclasses);
-
 % indicates whether the data represents kernel matrices
 mv_set_default(cfg,'is_kernel_matrix', isfield(cfg.hyperparameter,'kernel') && strcmp(cfg.hyperparameter.kernel,'precomputed'));
 
@@ -153,7 +143,10 @@ if cfg.is_kernel_matrix && ~isempty(gen_dim)
     error('generalization does not work together with precomputed kernel matrices')
 end
 
-if cfg.feedback, mv_print_classification_info(cfg,X,clabel); end
+if cfg.feedback, mv_print_regression_info(cfg, X, Y); end
+
+% univariate or multivariate?
+is_multivariate = size(Y,2) > 1;
 
 %% check dimension parameters
 % check sample dimensions
@@ -218,8 +211,8 @@ if numel(feature_dim) > 1 && cfg.flatten_features
 end
 
 %% Get train and test functions
-train_fun = eval(['@train_' cfg.classifier]);
-test_fun = eval(['@test_' cfg.classifier]);
+train_fun = eval(['@train_' cfg.model]);
+test_fun = eval(['@test_' cfg.model]);
 
 % Define search dimension
 sz_search = size(X);
@@ -252,56 +245,56 @@ nfeat = size(X);
 nfeat = nfeat(feature_dim);
 if isempty(nfeat), nfeat = 1; end
 
-%% Perform classification
+%% Perform regression
 if ~strcmp(cfg.cv,'none') 
     % -------------------------------------------------------
     % Perform cross-validation
 
-    % Initialise classifier outputs
-    cf_output = cell([cfg.repeat, cfg.k, sz_search]);
-    testlabel = cell([cfg.repeat, cfg.k]);
+    % Initialise regression model outputs
+    model_output = cell([cfg.repeat, cfg.k, sz_search]);
+    y_test = cell([cfg.repeat, cfg.k]);
     
     for rr=1:cfg.repeat                 % ---- CV repetitions ----
         if cfg.feedback, fprintf('Repetition #%d. Fold ',rr), end
         
         % Define cross-validation
-        CV = mv_get_crossvalidation_folds(cfg.cv, clabel, cfg.k, cfg.stratify, cfg.p);
+        CV = mv_get_crossvalidation_folds(cfg.cv, Y, cfg.k, 0, cfg.p);
         
         for kk=1:CV.NumTestSets                      % ---- CV folds ----
             if cfg.feedback, fprintf('%d ',kk), end
 
             % Get train and test data
-            [Xtrain, trainlabel, Xtest, testlabel{rr,kk}] = mv_select_train_and_test_data(X, clabel, CV.training(kk), CV.test(kk), cfg.is_kernel_matrix);
+            [X_train, y_train, X_test, y_test{rr,kk}] = mv_select_train_and_test_data(X, Y, CV.training(kk), CV.test(kk), cfg.is_kernel_matrix);
 
             if ~isempty(cfg.preprocess)
                 % Preprocess train data
-                [tmp_cfg, Xtrain, trainlabel] = mv_preprocess(cfg, Xtrain, trainlabel);
+                [tmp_cfg, X_train, y_train] = mv_preprocess(cfg, X_train, y_train);
                 
                 % Preprocess test data
-                [~, Xtest, testlabel{rr,kk}] = mv_preprocess(tmp_cfg, Xtest, testlabel{rr,kk});
+                [~, X_test, y_test{rr,kk}] = mv_preprocess(tmp_cfg, X_test, y_test{rr,kk});
             end
             
             if ~isempty(gen_dim)
                 % ---- Generalization ---- (eg time x time)
                 % Instead of looping through the generalization dimension,
                 % which would require an additional loop, we reshape the test
-                % data and apply the classifier to all elements of the
+                % data and apply the model to all elements of the
                 % generalization dimension at once
                 
                 % gen_dim is the last search dimension. For reshaping we
                 % need to move it to the first search dim position and
                 % shift the other dimensions up one position, we can use 
                 % circshift for this
-                Xtest = permute(Xtest, [sample_dim, circshift(search_dim,1), feature_dim]);
+                X_test = permute(X_test, [sample_dim, circshift(search_dim,1), feature_dim]);
                 
                 % reshape samples x gen dim into one dimension
-                sz_search = size(Xtest);
-                Xtest = reshape(Xtest, [sz_search(1)*sz_search(2), sz_search(3:end)]);
+                sz_search = size(X_test);
+                X_test = reshape(X_test, [sz_search(1)*sz_search(2), sz_search(3:end)]);
             end
             
             % Remember sizes
-            sz_Xtrain = size(Xtrain);
-            sz_Xtest = size(Xtest);
+            sz_Xtrain = size(X_train);
+            sz_Xtest = size(X_test);
             
             for ix = dim_loop                       % ---- search dimensions ----
                                 
@@ -310,28 +303,33 @@ if ~strcmp(cfg.cv,'none')
                     % --- searchlight --- define neighbours for current iteration
                     ix_nb = cellfun( @(N,f) find(N(f,:)), cfg.neighbours, ix, 'Un',0);
                     % train data
-                    X_ix = Xtrain(sample_skip{:}, ix_nb{:}, feature_skip{:});
+                    X_ix = X_train(sample_skip{:}, ix_nb{:}, feature_skip{:});
                     X_ix = reshape(X_ix, [sz_Xtrain(sample_dim), prod(cellfun(@numel, ix_nb)) * nfeat]);
                     % test data
-                    Xtest_ix = squeeze(Xtest(sample_skip{:}, ix_nb{:}, feature_skip{:}));
-                    Xtest_ix = reshape(Xtest_ix, [sz_Xtest(sample_dim), prod(cellfun(@numel, ix_nb)) * nfeat]);
+                    X_test_ix = squeeze(X_test(sample_skip{:}, ix_nb{:}, feature_skip{:}));
+                    X_test_ix = reshape(X_test_ix, [sz_Xtest(sample_dim), prod(cellfun(@numel, ix_nb)) * nfeat]);
                 else
                     if isempty(gen_dim),    ix_test = ix;
                     else,                   ix_test = ix(1:end-1);
                     end
-                    X_ix = squeeze(Xtrain(sample_skip{:}, ix{:}, feature_skip{:}));
-                    Xtest_ix = squeeze(Xtest(sample_skip{:}, ix_test{:}, feature_skip{:}));
+                    X_ix = squeeze(X_train(sample_skip{:}, ix{:}, feature_skip{:}));
+                    X_test_ix = squeeze(X_test(sample_skip{:}, ix_test{:}, feature_skip{:}));
                 end
                 
-                % Train classifier
-                cf= train_fun(cfg.hyperparameter, X_ix, trainlabel);
+                % Train regression model
+                model= train_fun(cfg.hyperparameter, X_ix, y_train);
 
-                % Obtain classifier output (labels, dvals or probabilities)
+                % Obtain regression output
                 if isempty(gen_dim)
-                    cf_output{rr,kk,ix{:}} = mv_get_classifier_output(cfg.output_type, cf, test_fun, Xtest_ix);
+                    model_output{rr,kk,ix{:}} = test_fun(model, X_test_ix);
+                elseif ~is_multivariate
+                    % we have to reshape regression model output back for
+                    % univariate output
+                    model_output{rr,kk,ix{:}} = reshape( test_fun(model, X_test_ix), numel(y_test{rr,kk}),[]);
                 else
-                    % we have to reshape classifier output back
-                    cf_output{rr,kk,ix{:}} = reshape( mv_get_classifier_output(cfg.output_type, cf, test_fun, Xtest_ix), numel(testlabel{rr,kk}),[]);
+                    % we have to reshape regression model output back for
+                    % multivariate output
+                    model_output{rr,kk,ix{:}} = reshape( test_fun(model, X_test_ix), size(y_test{rr,kk},1),size(y_test{rr,kk},2),[]);
                 end
             end
 
@@ -351,25 +349,25 @@ elseif strcmp(cfg.cv,'none')
     
     % Preprocess train/test data
     if ~isempty(cfg.preprocess)
-        [~, X, clabel] = mv_preprocess(cfg, X, clabel);
+        [~, X, Y] = mv_preprocess(cfg, X, Y);
     end
     
-    % Initialise classifier outputs
-    cf_output = cell([1, 1, sz_search]);
+    % Initialise regression model outputs
+    model_output = cell([1, 1, sz_search]);
     
     if ~isempty(gen_dim)
-        Xtest= permute(X, [sample_dim, circshift(search_dim,1), feature_dim]);
+        X_test= permute(X, [sample_dim, circshift(search_dim,1), feature_dim]);
         
         % reshape samples x gen dim into one dimension
-        sz_search = size(Xtest);
-        Xtest= reshape(Xtest, [sz_search(1)*sz_search(2), sz_search(3:end)]);
+        sz_search = size(X_test);
+        X_test= reshape(X_test, [sz_search(1)*sz_search(2), sz_search(3:end)]);
     else
-        Xtest = X;
+        X_test = X;
     end
     
     % Remember sizes
     sz_Xtrain = size(X);
-    sz_Xtest = size(Xtest);
+    sz_Xtest = size(X_test);
     
     for ix = dim_loop                       % ---- search dimensions ----
         
@@ -381,31 +379,36 @@ elseif strcmp(cfg.cv,'none')
             X_ix = X(sample_skip{:}, ix_nb{:}, feature_skip{:});
             X_ix= reshape(X_ix, [sz_Xtrain(sample_dim), prod(cellfun(@numel, ix_nb)) * nfeat]);
             % test data
-            Xtest_ix = squeeze(Xtest(sample_skip{:}, ix_nb{:}, feature_skip{:}));
-            Xtest_ix = reshape(Xtest_ix, [sz_Xtest(sample_dim), prod(cellfun(@numel, ix_nb)) * nfeat]);
+            X_test_ix = squeeze(X_test(sample_skip{:}, ix_nb{:}, feature_skip{:}));
+            X_test_ix = reshape(X_test_ix, [sz_Xtest(sample_dim), prod(cellfun(@numel, ix_nb)) * nfeat]);
         else
             if isempty(gen_dim),    ix_test = ix;
             else,                   ix_test = ix(1:end-1);
             end
             X_ix= squeeze(X(sample_skip{:}, ix{:}, feature_skip{:}));
-            Xtest_ix = squeeze(Xtest(sample_skip{:}, ix_test{:}, feature_skip{:}));
+            X_test_ix = squeeze(X_test(sample_skip{:}, ix_test{:}, feature_skip{:}));
         end
         
-        % Train classifier
-        cf= train_fun(cfg.hyperparameter, X_ix, clabel);
-        
-        % Obtain classifier output (labels, dvals or probabilities)
+        % Train regression model
+        model= train_fun(cfg.hyperparameter, X_ix, Y);
+                
+        % Obtain regression output (labels, dvals or probabilities)
         if isempty(gen_dim)
-            cf_output{1,1,ix{:}} = mv_get_classifier_output(cfg.output_type, cf, test_fun, Xtest_ix);
+            model_output{1,1,ix{:}} = test_fun(model, X_test_ix);
+        elseif ~is_multivariate
+            % we have to reshape regression model output back for
+            % univariate output
+            model_output{1,1,ix{:}} = reshape( test_fun(model, X_test_ix), numel(Y),[]);
         else
-            % we have to reshape classifier output back
-            cf_output{1,1,ix{:}} = reshape( mv_get_classifier_output(cfg.output_type, cf, test_fun, Xtest_ix), numel(clabel),[]);
+            % we have to reshape regression model output back for
+            % multivariate output
+            model_output{1,1,ix{:}} = reshape( test_fun(model, X_test_ix), size(Y,1),size(Y,2),[]);
         end
+        
     end
 
-    testlabel = clabel;
+    y_test = Y;
     avdim = [];
-
 end
 
 %% Calculate performance metrics
@@ -414,10 +417,10 @@ perf = cell(nmetrics, 1);
 perf_std = cell(nmetrics, 1);
 for mm=1:nmetrics
     if strcmp(cfg.metric{mm},'none')
-        perf{mm} = cf_output;
+        perf{mm} = model_output;
         perf_std{mm} = [];
     else
-        [perf{mm}, perf_std{mm}] = mv_calculate_performance(cfg.metric{mm}, cfg.output_type, cf_output, testlabel, avdim);
+        [perf{mm}, perf_std{mm}] = mv_calculate_performance(cfg.metric{mm}, 'regression', model_output, y_test, avdim);
     end
 end
 if cfg.feedback, fprintf('finished\n'), end
@@ -437,6 +440,5 @@ if nargout>1
    result.cv        = cfg.cv;
    result.k         = cfg.k;
    result.repeat    = cfg.repeat;
-   result.nclasses  = nclasses;
-   result.classifier = cfg.classifier;
+   result.model     = cfg.model;
 end
