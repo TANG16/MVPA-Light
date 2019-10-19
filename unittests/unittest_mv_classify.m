@@ -263,6 +263,7 @@ cfg.hyperparameter.lambda   = 0.1;
 cfg.feedback                = 0;
 cfg.cv                      = 'kfold';
 cfg.k                       = 2;
+cfg.repeat                  = 1;
 
 % try out all possible positions for samples, generalization, and features
 

@@ -22,11 +22,11 @@ end
 Xpca = X*V;
 
 % Cross-validation
-CV = cvpartition(N,'KFold',cfg.K);
+CV = cvpartition(N,'KFold',cfg.k);
 ws = zeros(numel(D), numel(cfg.lambda));
 acc = zeros(numel(cfg.lambda),1);
 
-for ff=1:cfg.K
+for ff=1:cfg.k
     Xtrain = Xpca(CV.training(ff),:);
     idx1 = clabel(CV.training(ff))==1;
     idx2 = clabel(CV.training(ff))==2;
@@ -58,7 +58,7 @@ for ff=1:cfg.K
     
 end
 
-acc = acc / cfg.K;
+acc = acc / cfg.k;
 
 [~, idx] = max(acc);
 lambda = cfg.lambda(idx);
@@ -73,7 +73,7 @@ if cfg.plot
     % Plot cross-validated classification performance
     figure
     semilogx(cfg.lambda, acc)
-    title([num2str(cfg.K) '-fold cross-validation performance'])
+    title([num2str(cfg.k) '-fold cross-validation performance'])
     hold all
     plot([lambda, lambda],ylim,'r--'),plot(lambda, acc(idx),'ro')
     xlabel('Lambda'),ylabel('Accuracy')

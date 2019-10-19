@@ -117,8 +117,8 @@ if ~isempty(cfg.cross)
 end
 
 %% Add labels and title
-xlabel(cfg.xlabel);
-ylabel(cfg.ylabel);
+xlabel(cfg.xlabel,'Interpreter', 'none');
+ylabel(cfg.ylabel,'Interpreter', 'none');
 title(cfg.title,'Interpreter','none');
 
 %% Add grid

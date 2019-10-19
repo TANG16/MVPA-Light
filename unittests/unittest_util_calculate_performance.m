@@ -13,6 +13,8 @@ N1 = 100;
 N2 = 200;
 N3 = 300;
 
+%% --- CLASSIFICATION METRICS --
+
 %% ACCURACY
 %% using class labels: check accuracy when it should be 0, 0.5, and 1 [two-class]
 metric = 'accuracy';
@@ -265,3 +267,50 @@ perf05 = mv_calculate_performance(metric, output_type, cf_output05, clabel);
 print_unittest_result('[f1] when clabel do not match', nan, perf0, tol);
 print_unittest_result('[f1] when clabel match perfectly', 1, perf1, tol);
 print_unittest_result('[f1] when clabel half match', N1/(N1+N2)/(N1/(N1+N2)+0.5), perf05, tol);
+
+%% --- REGRESSION METRICS --
+
+%% MSE / mean squared error
+metric = 'mse';
+y = abs(randn(N1, 3)*10);
+y_hat = y; 
+
+perf0 = mv_calculate_performance(metric, '', y_hat, y);
+perf1 = mv_calculate_performance(metric, '', y_hat+2, y);
+
+print_unittest_result('[MSE] when y_hat = y', 0, perf0, tol);
+print_unittest_result('[MSE] when y_hat = y+2', 4, perf1, tol);
+
+%% MAE / mean absolute error
+metric = 'mae';
+y = abs(randn(N1, 1)*10);
+y_hat = y; 
+
+perf0 = mv_calculate_performance(metric, '', y_hat, y);
+perf1 = mv_calculate_performance(metric, '', y_hat+2, y);
+
+print_unittest_result('[MAE] when y_hat = y', 0, perf0, tol);
+print_unittest_result('[MAE] when y_hat = y+2', 2, perf1, tol);
+
+%% R-squared
+metric = 'r_squared';
+y = abs(randn(N1, 1)*10);
+y_hat0 = y; 
+
+% regression relation
+x_reg = randn(N1,1);
+y_reg = x_reg + randn(N1,1);
+B = regress(y_reg, x_reg);
+y_hat1 = x_reg*B;
+
+perf0 = mv_calculate_performance(metric, '', y_hat0, y);
+perf1 = mv_calculate_performance(metric, '', y_hat1, y_reg);
+
+% Let's invert y_hat1 which is equivalent to taking the negative slope: the
+% R2 coefficient should now get negative since the model does not explain
+% any variance but adds in variance
+perf2 = mv_calculate_performance(metric, '', -y_hat1, y_reg);
+
+print_unittest_result('[R-squared] when y_hat = y', 1, perf0,  tol);
+print_unittest_result('[R-squared] between [0,1] after linear regression', 1, 0<=perf1<=1, tol);
+print_unittest_result('[R-squared] negative when taking the negative slope', 1, perf2<0, tol);

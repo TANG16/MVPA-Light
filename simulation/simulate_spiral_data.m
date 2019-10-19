@@ -32,7 +32,7 @@ if nargin<2 || isempty(nrevolutions), nrevolutions = 1/4; end
 if nargin<3 || isempty(nclasses), nclasses = 2; end
 if nargin<4 || isempty(prop), prop = 'equal'; end
 if nargin<5 || isempty(scale), scale = 0; end
-if nargin<6 || isempty(do_plot), do_plot = 1; end
+if nargin<6 || isempty(do_plot), do_plot = 0; end
 
 % Check input arguments
 if ischar(prop) && strcmp(prop,'equal') && ~(rem(nsamples, nclasses)==0)

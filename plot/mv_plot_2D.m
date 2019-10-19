@@ -218,8 +218,8 @@ end
 
 %% Add labels and title
 for ii=1:P  
-    if ~isempty(cfg.xlabel{ii}), h.xlabel(ii) = xlabel(h.ax(ii),cfg.xlabel{ii}); end
-    if ~isempty(cfg.ylabel{ii}), h.ylabel(ii) = ylabel(h.ax(ii),cfg.ylabel{ii}); end
+    if ~isempty(cfg.xlabel{ii}), h.xlabel(ii) = xlabel(h.ax(ii),cfg.xlabel{ii},'Interpreter', 'none'); end
+    if ~isempty(cfg.ylabel{ii}), h.ylabel(ii) = ylabel(h.ax(ii),cfg.ylabel{ii},'Interpreter', 'none'); end
     if ~isempty(cfg.title{ii}), h.title(ii) = title(h.ax(ii),cfg.title{ii},'Interpreter','none'); end
 end
 

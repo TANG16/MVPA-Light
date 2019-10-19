@@ -24,8 +24,8 @@ if cf.prob==1 && nargout>2
     % To obtain posterior probabilities, we evaluate a multivariate normal
     % pdf at the test data point. As decision values, we output relative
     % class probabilities for class 1
-    prob1= mvnpdf(X, cf.mu1', cf.Sw/cf.N);
-    prob2= mvnpdf(X, cf.mu2', cf.Sw/cf.N);
+    prob1= mvnpdf(X, cf.mu1', cf.Sw/cf.n);
+    prob2= mvnpdf(X, cf.mu2', cf.Sw/cf.n);
     prob= prob1*cf.prior1 ./ (prob1*cf.prior1 + prob2*cf.prior2);
 
 end

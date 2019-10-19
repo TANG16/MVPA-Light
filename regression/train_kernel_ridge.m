@@ -1,30 +1,24 @@
-function cf = train_kernel_fda(param,X,clabel)
-% Trains a kernel Fisher Discriminant Analysis (KFDA). Works with an
-% arbitrary number of classes. For a linear kernel, it is equivalent to
-% LDA.
+function cf = train_kernel_ridge(param, X, Y)
+% Trains a kernel ridge regression model.
 %
 % Usage:
-% cf = train_kernel_fda(param,X,clabel)
+% cf = train_kernel_fda(param, X, Y)
 %
 %Parameters:
-% X              - [samples x features] matrix of training samples -OR-
+% X              - [samples x features] matrix of training samples (should
+%                                 not include intercept term/column of 1's)
+%                  -OR-
 %                  [samples x samples] kernel matrix
-% clabel         - [samples x 1] vector of class labels
+% Y              - [samples x 1] vector of responses (for univariate
+%                                regression) -or- 
+%                  [samples x m] matrix of responses (for multivariate 
+%                                regression with m response variables)
 %
 % param          - struct with hyperparameters:
-% .reg          - type of regularization
-%                 'shrink': shrinkage regularization using (1-lambda)*N +
-%                          lambda*nu*I, where nu = trace(N)/P and P =
-%                          number of samples. nu assures that the trace of
-%                          N is equal to the trace of the regularization
-%                          term. 
-%                 'ridge': ridge-type regularization of N + lambda*I,
-%                          where N is the dual within-class scatter matrix 
-%                          and I is the identity matrix
-%                  (default 'shrink')
-% .lambda        - if reg='shrink', the regularization parameter ranges 
-%                  from 0 to 1 (where 0=no regularization and 1=maximum
-%                  regularization). (default 10^-5)
+% .lambda        - regularization parameter for ridge regression, ranges
+%                  from 0 (no regularization) to infinity. For lambda=0,
+%                  the model yields standard linear (OLS) regression, for 
+%                  lambda > 0 it yields ridge regression (default 1).
 % .kernel        - kernel function:
 %                  'linear'     - linear kernel ker(x,y) = x' y
 %                  'rbf'        - radial basis function or Gaussian kernel
@@ -50,26 +44,25 @@ function cf = train_kernel_fda(param,X,clabel)
 %                 high degree makes overfitting likely (default 2)
 %
 % IMPLEMENTATION DETAILS:
-% The notation in Mika et al is used below, see also wikipedia page:
-% https://en.wikipedia.org/wiki/Kernel_Fisher_discriminant_analysis#Kernel_trick_with_LDA
+% The solution to the kernel ridge regression problem is given by
+%
+% alpha = (K + lambda I)^-1  y    (dual form)
+%
+% where lambda is the regularization hyperparameter and K is the [samples x
+% samples] kernel matrix. Predictions on new data are then obtained using 
+%
+% f(x) = alpha' *  k 
+%
+% where k = (k(x1, x), ... , k(xn, x))' is the vector of kernel evaluations
+% between the training data and the test sample x.
 %
 % REFERENCE:
-% Mika S, Raetsch G, Weston J, Schoelkopf B, Mueller KR (1999). 
-% Fisher discriminant analysis with kernels. Neural Networks for Signal
-% Processing. IX: 41–48.
+% https://people.eecs.berkeley.edu/~bartlett/courses/281b-sp08/10.pdf
 
 % (c) Matthias Treder
 
-% not currently used (since we regularize N):
-% kernel_regularization     - regularization parameter for the kernel matrix. The
-%                  kernel matrix K is replaced by K + kernel_regularization*I where I
-%                  is the identity matrix (default 10e-10)
-
-nclasses = max(clabel);
-nsamples = size(X,1);
-
-% Number of samples per class
-l = arrayfun(@(c) sum(clabel == c), 1:nclasses);
+[N, P] = size(X);
+model = struct();
 
 % indicates whether kernel matrix has been precomputed
 is_precomputed = strcmp(param.kernel,'precomputed');
@@ -85,22 +78,14 @@ if is_precomputed
 else
     kernelfun = eval(['@' param.kernel '_kernel']);     % Kernel function
     K = kernelfun(param, X);                            % Compute kernel matrix
-
-%     % Regularize
-%     if param.regularize_kernel > 0
-%         K = K + param.regularize_kernel * eye(size(X,1));
-%     end
 end
 
-%% N: "Dual" of within-class scatter matrix
-N = zeros(nsamples);
 
-% Get indices of samples for each class
-ix = arrayfun( @(c) clabel==c, 1:nclasses,'Un',0);
+%% --- the rest ---
 
-for c=1:nclasses
-    N = N + K(:,ix{c}) * (eye(l(c)) - 1/l(c)) * K(ix{c},:);
-end
+% For tuning, we do not need to compute the kernel again
+tmp = param;
+tmp.kernel = 'precomputed';
 
 %% Regularization of N
 lambda = param.lambda;
@@ -119,10 +104,13 @@ end
 
 %% M: "Dual" of between-classes scatter matrix
 
+% Get indices of samples for each class
+cidx = arrayfun( @(c) clabel==c, 1:nclasses,'Un',0);
+
 % Get class-wise means
 Mj = zeros(nsamples,nclasses);
 for c=1:nclasses
-    Mj(:,c) = mean( K(:, ix{c}), 2);
+    Mj(:,c) = mean( K(:, cidx{c}), 2);
 end
 
 % Sample mean
