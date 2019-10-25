@@ -124,7 +124,7 @@ mv_set_default(cfg,'preprocess',{});
 mv_set_default(cfg,'preprocess_param',{});
 
 % mv_check_inputs assumes samples are in dimension 1 so need to permute
-[cfg, Y, nmetrics] = mv_check_inputs_for_regression(cfg, X, Y);
+[cfg, Y, n_metrics] = mv_check_inputs_for_regression(cfg, X, Y);
 % [cfg, Y, nmetrics] = mv_check_inputs_for_regression(cfg, permute(X,[cfg.sample_dimension, setdiff(1:ndims(X), cfg.sample_dimension)]), Y);
 
 % sort dimension vectors
@@ -413,32 +413,39 @@ end
 
 %% Calculate performance metrics
 if cfg.feedback, fprintf('Calculating performance metrics... '), end
-perf = cell(nmetrics, 1);
-perf_std = cell(nmetrics, 1);
-for mm=1:nmetrics
+perf = cell(n_metrics, 1);
+perf_std = cell(n_metrics, 1);
+perf_dimension_names = cell(n_metrics, 1);
+for mm=1:n_metrics
     if strcmp(cfg.metric{mm},'none')
         perf{mm} = model_output;
         perf_std{mm} = [];
     else
         [perf{mm}, perf_std{mm}] = mv_calculate_performance(cfg.metric{mm}, 'regression', model_output, y_test, avdim);
+        % performance dimension names
+        if isvector(perf{mm})
+            perf_dimension_names{mm} = cfg.dimension_names(search_dim);
+        else
+            perf_dimension_names{mm} = [cfg.dimension_names(search_dim) repmat({'metric'}, 1, ndims(perf{mm})-numel(search_dim)-numel(gen_dim)) cfg.dimension_names(gen_dim)];
+        end
     end
 end
 if cfg.feedback, fprintf('finished\n'), end
 
-if nmetrics==1
+if n_metrics==1
     perf = perf{1};
     perf_std = perf_std{1};
+    perf_dimension_names = perf_dimension_names{1};
     cfg.metric = cfg.metric{1};
 end
 
 result = [];
 if nargout>1
-   result.function  = mfilename;
-   result.perf      = perf;
-   result.perf_std  = perf_std;
-   result.metric    = cfg.metric;
-   result.cv        = cfg.cv;
-   result.k         = cfg.k;
-   result.repeat    = cfg.repeat;
-   result.model     = cfg.model;
+   result.function              = mfilename;
+   result.perf                  = perf;
+   result.perf_std              = perf_std;
+   result.perf_dimension_names  = perf_dimension_names;
+   result.metric                = cfg.metric;
+   result.model                 = cfg.model;
+   result.cfg                   = cfg;
 end

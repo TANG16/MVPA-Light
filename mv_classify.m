@@ -132,7 +132,7 @@ mv_set_default(cfg,'preprocess',{});
 mv_set_default(cfg,'preprocess_param',{});
 
 % mv_check_inputs assumes samples are in dimension 1 so need to permute
-[cfg, clabel, nclasses, nmetrics] = mv_check_inputs(cfg, permute(X,[cfg.sample_dimension, setdiff(1:ndims(X), cfg.sample_dimension)]), clabel);
+[cfg, clabel, n_classes, n_metrics] = mv_check_inputs(cfg, permute(X,[cfg.sample_dimension, setdiff(1:ndims(X), cfg.sample_dimension)]), clabel);
 
 % sort dimension vectors
 sample_dim = sort(cfg.sample_dimension);
@@ -143,7 +143,7 @@ gen_dim = cfg.generalization_dimension;
 search_dim = setdiff(1:ndims(X), [sample_dim, feature_dim]);
 
 % Number of samples in the classes
-n = arrayfun( @(c) sum(clabel==c) , 1:nclasses);
+n = arrayfun( @(c) sum(clabel==c) , 1:n_classes);
 
 % indicates whether the data represents kernel matrices
 mv_set_default(cfg,'is_kernel_matrix', isfield(cfg.hyperparameter,'kernel') && strcmp(cfg.hyperparameter.kernel,'precomputed'));
@@ -410,33 +410,41 @@ end
 
 %% Calculate performance metrics
 if cfg.feedback, fprintf('Calculating performance metrics... '), end
-perf = cell(nmetrics, 1);
-perf_std = cell(nmetrics, 1);
-for mm=1:nmetrics
+perf = cell(n_metrics, 1);
+perf_std = cell(n_metrics, 1);
+perf_dimension_names = cell(n_metrics, 1);
+for mm=1:n_metrics
     if strcmp(cfg.metric{mm},'none')
         perf{mm} = cf_output;
         perf_std{mm} = [];
     else
         [perf{mm}, perf_std{mm}] = mv_calculate_performance(cfg.metric{mm}, cfg.output_type, cf_output, testlabel, avdim);
+        % performance dimension names
+        if isvector(perf{mm})
+            perf_dimension_names{mm} = cfg.dimension_names(search_dim);
+        else
+            perf_dimension_names{mm} = [cfg.dimension_names(search_dim) repmat({'metric'}, 1, ndims(perf{mm})-numel(search_dim)-numel(gen_dim)) cfg.dimension_names(gen_dim)];
+        end
     end
 end
 if cfg.feedback, fprintf('finished\n'), end
 
-if nmetrics==1
+if n_metrics==1
     perf = perf{1};
     perf_std = perf_std{1};
+    perf_dimension_names = perf_dimension_names{1};
     cfg.metric = cfg.metric{1};
 end
 
 result = [];
 if nargout>1
-   result.function  = mfilename;
-   result.perf      = perf;
-   result.perf_std  = perf_std;
-   result.metric    = cfg.metric;
-   result.cv        = cfg.cv;
-   result.k         = cfg.k;
-   result.repeat    = cfg.repeat;
-   result.nclasses  = nclasses;
-   result.classifier = cfg.classifier;
+   result.function              = mfilename;
+   result.perf                  = perf;
+   result.perf_std              = perf_std;
+   result.perf_dimension_names  = perf_dimension_names;
+   result.metric                = cfg.metric;
+   result.n_metrics             = n_metrics;
+   result.n_classes             = n_classes;
+   result.classifier            = cfg.classifier;
+   result.cfg                   = cfg;
 end

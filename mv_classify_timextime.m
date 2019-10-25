@@ -88,7 +88,7 @@ mv_set_default(cfg,'dimension_names',{'samples','features','time points'});
 mv_set_default(cfg,'preprocess',{});
 mv_set_default(cfg,'preprocess_param',{});
 
-[cfg, clabel, nclasses, nmetrics] = mv_check_inputs(cfg, X, clabel);
+[cfg, clabel, n_classes, n_metrics] = mv_check_inputs(cfg, X, clabel);
 
 hasX2 = (nargin==5);
 if hasX2, mv_set_default(cfg,'time2',1:size(X2,3));
@@ -98,7 +98,7 @@ nTime1 = numel(cfg.time1);
 nTime2 = numel(cfg.time2);
 
 % Number of samples in the classes
-n = arrayfun( @(c) sum(clabel==c) , 1:nclasses);
+n = arrayfun( @(c) sum(clabel==c) , 1:n_classes);
 
 % this function does not work with precomputed kernel matrices
 if isfield(cfg.hyperparameter,'kernel') && strcmp(cfg.hyperparameter.kernel,'precomputed')
@@ -261,48 +261,41 @@ end
 
 %% Calculate performance metrics
 if cfg.feedback, fprintf('Calculating performance metrics... '), end
-perf = cell(nmetrics, 1);
-perf_std = cell(nmetrics, 1);
-for mm=1:nmetrics
+perf = cell(n_metrics, 1);
+perf_std = cell(n_metrics, 1);
+perf_dimension_names = cell(n_metrics, 1);
+for mm=1:n_metrics
     if strcmp(cfg.metric{mm},'none')
         perf{mm} = cf_output;
         perf_std{mm} = [];
     else
         [perf{mm}, perf_std{mm}] = mv_calculate_performance(cfg.metric{mm}, cfg.output_type, cf_output, testlabel, avdim);
+        % performance dimension names
+        perf_dimension_names{mm} = [cfg.dimension_names(end) repmat({'metric'}, 1, ndims(perf{mm})-2) cfg.dimension_names(end)];
     end
 end
 if cfg.feedback, fprintf('finished\n'), end
 
-if nmetrics==1
+if n_metrics==1
     perf = perf{1};
     perf_std = perf_std{1};
+    perf_dimension_names = perf_dimension_names{1};
     cfg.metric = cfg.metric{1};
 end
 
-% if isempty(cfg.metric) || strcmp(cfg.metric,'none')
-%     if cfg.feedback, fprintf('No performance metric requested, returning raw classifier output.\n'), end
-%     perf = cf_output;
-%     perf_std = [];
-% else
-%     if cfg.feedback, fprintf('Calculating classifier performance... '), end
-%     [perf, perf_std] = mv_calculate_performance(cfg.metric, cfg.output_type, cf_output, testlabel, avdim);
-%     if cfg.feedback, fprintf('finished\n'), end
-% end
-
 result = [];
 if nargout>1
-   result.function  = mfilename;
-   result.perf      = perf;
-   result.perf_std  = perf_std;
-   result.metric    = cfg.metric;
-   result.cv        = cfg.cv;
-   result.k         = cfg.k;
+   result.function              = mfilename;
+   result.perf                  = perf;
+   result.perf_std              = perf_std;
+   result.perf_dimension_names  = perf_dimension_names;
+   result.metric                = cfg.metric;
    if hasX2
-       result.n         = size(X2,1);
+       result.n                 = size(X2,1);
    else
-       result.n         = size(X,1);
+       result.n                 = size(X,1);
    end
-   result.repeat    = cfg.repeat;
-   result.nclasses  = nclasses;
-   result.classifier = cfg.classifier;
+   result.n_classes             = n_classes;
+   result.classifier            = cfg.classifier;
+   result.cfg                   = cfg;
 end
