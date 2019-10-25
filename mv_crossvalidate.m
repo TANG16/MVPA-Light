@@ -145,12 +145,19 @@ end
 if cfg.feedback, fprintf('Calculating performance metrics... '), end
 perf = cell(nmetrics, 1);
 perf_std = cell(nmetrics, 1);
+perf_dimension_names = cell(nmetrics, 1);
 for mm=1:nmetrics
     if strcmp(cfg.metric{mm},'none')
         perf{mm} = cf_output;
         perf_std{mm} = [];
     else
         [perf{mm}, perf_std{mm}] = mv_calculate_performance(cfg.metric{mm}, cfg.output_type, cf_output, testlabel, avdim);
+        % performance dimension names
+        if isvector(perf{mm})
+            perf_dimension_names{mm} = 'metric';
+        else
+            perf_dimension_names{mm} = repmat({'metric'}, 1, ndims(perf{mm}));
+        end
     end
 end
 if cfg.feedback, fprintf('finished\n'), end
@@ -158,19 +165,19 @@ if cfg.feedback, fprintf('finished\n'), end
 if nmetrics==1
     perf = perf{1};
     perf_std = perf_std{1};
+    perf_dimension_names = perf_dimension_names{1};
     cfg.metric = cfg.metric{1};
 end
 
 result = [];
 if nargout>1
-   result.function  = mfilename;
-   result.perf      = perf;
-   result.perf_std  = perf_std;
-   result.metric    = cfg.metric;
-   result.cv        = cfg.cv;
-   result.k         = cfg.k;
-   result.n         = size(X,1);
-   result.repeat    = cfg.repeat;
-   result.nclasses  = nclasses;
-   result.classifier = cfg.classifier;
+   result.function              = mfilename;
+   result.perf                  = perf;
+   result.perf_std              = perf_std;
+   result.perf_dimension_names  = perf_dimension_names;
+   result.metric                = cfg.metric;
+   result.n                     = size(X,1);
+   result.n_classes             = n_classes;
+   result.classifier            = cfg.classifier;
+   result.cfg                   = cfg;
 end
