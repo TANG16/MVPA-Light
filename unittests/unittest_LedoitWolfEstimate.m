@@ -39,6 +39,6 @@ print_unittest_result('[P >> N data] compare primal and dual result', LW(X, 'pri
 print_unittest_result('[N >> P data] compare primal and dual result', LW(X2, 'primal'), LW(X2, 'dual'), tol);
 
 [~,lambda]=cov1para(X);
-print_unittest_result('[P >> N data] compare with cov1para', LW(X, 'primal'), lambda, tol);
+print_unittest_result('[P >> N data] compare with cov1para.m', LW(X, 'primal'), lambda, tol);
 [~,lambda]=cov1para(X2);
-print_unittest_result('[N >> P data] compare with cov1para', LW(X2, 'primal'), lambda, tol);
+print_unittest_result('[N >> P data] compare with cov1para.m', LW(X2, 'primal'), lambda, tol);

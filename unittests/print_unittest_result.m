@@ -25,7 +25,7 @@ expect_str = mat2str(expect);
 actual_str = mat2str(actual);
 
 maxlen = 20;
-if numel(expect_str)>maxlen,
+if numel(expect_str)>maxlen
     expect_str = [expect_str(1:maxlen), ' ...']; 
     if strcmp(expect_str(1),'['), expect_str = [expect_str ']']; end
 end
@@ -41,7 +41,7 @@ if d < tol      % --- PASS ---
     fprintf('%s < %d', result, tol)
     fprintf('\tPASS\n')
     pass = 1;
-elseif all(isnan(expect)) && all(isnan(actual)) % --- PASS ---
+elseif all(isnan(expect(:))) && all(isnan(actual(:))) % --- PASS ---
     fprintf('%s (both NaN)', result)
     fprintf('\tPASS\n')
     pass = 1;
