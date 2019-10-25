@@ -34,7 +34,8 @@ function [cf,Sw,lambda,mu1,mu2] = train_lda(param,X,clabel)
 %                  and memory so don't use this unless needed. Probabilities 
 %                  can be unreliable in high dimensions (default 0). Note
 %                  that for probabilities the covariance matrix needs to be
-%                  calculated, so it can only be used in primal form.
+%                  calculated, so it can only be used in primal form (hence
+%                  set hyperparameter.form = 'primal')
 % .scale         - if 1, the projection vector w is scaled such that the
 %                  mean of class 1 (on the training data) projects onto +1
 %                  and the mean of class 2 (on the training data) projects
@@ -55,7 +56,7 @@ function [cf,Sw,lambda,mu1,mu2] = train_lda(param,X,clabel)
 % The following output arguments can be returned optionally:
 % Sw           - covariance matrix (possibly regularized)
 % mu1,mu2      - class means
-% N            - total number of samples
+% n            - total number of samples
 
 % (c) Matthias Treder
 
@@ -67,11 +68,6 @@ ix2= (clabel==2);  % logical indices for samples in class 2
 
 n1 = sum(ix1);
 n2 = sum(ix2);
-
-% remove mean (this is done after calculating class means since it's mainly
-% needed for computing the covariance/Gram matrices)
-% X = X - repmat(mean(X,1), n, 1);
-
 
 % Get class means
 mu1= mean(X(ix1,:))';
@@ -130,16 +126,14 @@ if strcmp(form, 'primal')
     % Classifier weight vector (= normal to the separating hyperplane)
     cf.w = Sw\(mu1-mu2);
     
-    % Scale w such that the class means are projected onto +1 and -1
-    if param.scale
-        cf.w = cf.w / ((mu1-mu2)'*cf.w) * 2;
-    end
-    
-    
 %% DUAL FORM
 elseif strcmp(form, 'dual')
     % the dual formulation is essentially the same as 
     % in kernel FDA
+    
+    % remove grand mean (this is done after calculating class means since it's mainly
+    % needed for computing the covariance/Gram matrices)
+    X = X - repmat(mean(X,1), n, 1);
     
     % Gram matrix
     K = X*X';
@@ -159,10 +153,10 @@ elseif strcmp(form, 'dual')
         N = N + lambda * K;
     end
 
-    % Because the regularization target above is K, N is generally still
-    % not invertible. Hence, we fix this here by adding little bit to the 
-    % diagonal to assure invertibility.
-    N = N + trace(N)/n/10^10 * eye(n);
+    % Since the regularization target above is K, N is generally still
+    % ill-conditioned. Here we fix this here by adding a little bit of an
+    % identity matrix
+    N = N + trace(N) * param.lambda_n * eye(n)/n;
 
     %% M: "Dual" of class means
     Mu1 = mean( K(:, ix1), 2);
@@ -173,9 +167,12 @@ elseif strcmp(form, 'dual')
     
     %% translate into weight vector
     cf.w = X' * cf.alpha;
-%      corr(cf.w, cf.w2)
-%      norm(cf.w - cf.w2)
-    
+
+end
+
+%% Scale w such that the class means are projected onto +1 and -1
+if param.scale
+    cf.w = cf.w / ((mu1-mu2)'*cf.w) * 2;
 end
 
 %% Bias term 
