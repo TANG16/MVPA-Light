@@ -47,6 +47,7 @@ switch(model)
     case 'lda'
         mv_set_default(param,'reg','shrink');
         mv_set_default(param,'lambda','auto');
+        mv_set_default(param,'lambda_n',1e-12);
         mv_set_default(param,'form','auto');
         mv_set_default(param,'prob',0);
         mv_set_default(param,'scale',0);
