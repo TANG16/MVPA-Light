@@ -36,6 +36,9 @@ function h = mv_plot_1D(varargin)
 % bounded           - cell array with additional arguments passed to
 %                     boundedline.m when a plot with errorbars is created
 %                     (default {'alpha'})
+% mark_bold         - when a binary mask is provided (eg with statistical
+%                     significance) the corresponding lines will be
+%                     plotted bold
 %
 % Returns:
 % h        - struct with handles to the graphical elements 
@@ -76,6 +79,10 @@ mv_set_default(cfg,'hor',0.5);
 mv_set_default(cfg,'ver',0);
 mv_set_default(cfg,'cross',{'--k'});
 mv_set_default(cfg,'bounded',{'alpha'});
+mv_set_default(cfg,'mark_bold',[]);
+
+mv_set_default(cfg,'label_options ', {'Fontsize', 14});
+mv_set_default(cfg,'title_options', {'Fontsize', 16, 'Fontweight', 'bold'});
 
 h = struct();
 h.ax = gca;
@@ -95,6 +102,13 @@ end
 %% Set line styles
 for ii=1:nY
     set(h.plt(ii),'LineStyle',cfg.lineorder{ mod(ii-1,numel(cfg.lineorder)) + 1 })
+end
+
+%% mark parts of the data using a bold line
+if ~isempty(cfg.mark_bold)
+    dat(~cfg.mark_bold) = nan;
+    tmp_h = boundedline(xval, dat, tmp, cfg.bounded{:});
+    set(tmp_h,'LineWidth', 4*get(tmp_h,'LineWidth'));
 end
 
 %% Mark zero line
@@ -117,9 +131,9 @@ if ~isempty(cfg.cross)
 end
 
 %% Add labels and title
-xlabel(cfg.xlabel,'Interpreter', 'none');
-ylabel(cfg.ylabel,'Interpreter', 'none');
-title(cfg.title,'Interpreter','none');
+xlabel(cfg.xlabel, cfg.label_options{:});
+ylabel(cfg.ylabel, cfg.label_options{:});
+title(cfg.title, cfg.title_options{:});
 
 %% Add grid
 grid(h.ax, cfg.grid{:})
