@@ -47,17 +47,19 @@ cfg.dimension_names = {'samples' 'channels'};
 % Call mv_regress to perform the regression 
 [perf, result] = mv_regress(cfg, X, y);
 
+mv_plot_result(result)
+
 %% Regression across time
 % Perform the same regression but this time for every time point, yielding
 % MAE as a function of time
 
 % Set up the structure with options for mv_regress
 cfg = [];
-cfg.cv = 'none';
 cfg.model   = 'ridge';
 cfg.metric  = 'mae';                 % mean absolute error
 cfg.dimension_names = {'samples' 'channels', 'time points'};
 
 [perf, result] = mv_regress(cfg, dat.trial, y);
 
-ax = mv_plot_1D(dat.time, perf, result.perf_std, 'ylabel', cfg.metric)
+% ax = mv_plot_1D(dat.time, perf, result.perf_std, 'ylabel', cfg.metric)
+mv_plot_result(result, dat.time)

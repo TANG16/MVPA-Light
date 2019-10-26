@@ -31,24 +31,70 @@ clear all
 [dat,clabel] = load_example_data('epoched2');
 
 %% Run classification across time
-
-% Configuration struct for time classification with cross-validation. We
-% perform 5-fold cross-validation with 2 repetitions. As classifier, we
-% use LDA with its default settings.
+% we start by running an ordinary classification across time analysis.
+% Since we want to perform a binomial test below, we need to select 
+% classification accuracy as a metric
 cfg =  [];
-cfg.cv              = 'kfold';
-cfg.k               = 5;
 cfg.repeat          = 2;
 cfg.classifier      = 'lda';
 cfg.metric          = 'accuracy';
 
-[acc, result] = mv_classify_across_time(cfg, dat.trial, clabel);
+[~, result] = mv_classify_across_time(cfg, dat.trial, clabel);
 
 mv_plot_result(result, dat.time)
 
 %% Binomial test
+cfg = [];
+cfg.test    = 'binomial';
 
+stat = mv_statistics(cfg, result);
+
+mv_plot_result(result, dat.time, 'mask', stat.mask)
 
 %% Permutation test
+% A permutation test works with any metric in principle. Here, we choose
+% AUC.
+cfg =  [];
+cfg.repeat          = 1;         % set to 1 to speed up the permutation test
+cfg.classifier      = 'lda';
+cfg.metric          = 'auc';
+
+[~, result] = mv_classify_across_time(cfg, dat.trial, clabel);
+
+cfg = [];
+cfg.test    = 'permutation';
+
+stat_permutation = mv_statistics(cfg, result, dat.trial, clabel);
+
+mv_plot_result(result, dat.time, 'mask', stat_permutation.mask)
+
+%% Cluster permutation test
+% starting from a permutation test, we can obtain a cluster permutation
+% test by setting correctm='cluster'
+cfg = [];
+cfg.test        = 'permutation';
+cfg.correctm    = 'cluster';
+
+stat_cluster = mv_statistics(cfg, result, dat.trial, clabel);
+
+%% time x time generalization
+cfg =  [];
+cfg.repeat          = 2;
+cfg.classifier      = 'lda';
+cfg.metric          = 'accuracy';
+
+[~, result_timextime] = mv_classify_timextime(cfg, dat.trial, clabel);
+
+mv_plot_result(result_timextime, dat.time)
+
+%% Binomial test
+cfg = [];
+cfg.test    = 'binomial';
+
+stat = mv_statistics(cfg, result_timextime);
+
+mv_plot_result(result_timextime, dat.time, 'mask', stat.mask)
+
+
 
 %% Cluster permutation test
