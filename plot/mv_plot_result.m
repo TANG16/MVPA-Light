@@ -56,11 +56,6 @@ function h = mv_plot_result(result, varargin)
 % In any other case, the features are plotted as bars in a bar graph.
 %
 % ADDITIONAL KEY-VALUE ARGUMENTS:
-% title          - string that serves as axis title
-% label          - if result argument is a cell array, a cell array of strings can
-%                  be provided to label the different results (serves as
-%                  legend labels for mv_classify_across_time plots and as
-%                  xlabels for mv_crossvalidate plots)
 % new_figure     - if 1, results are plotted in a new figure. If 0, results
 %                  are plotted in the current axes instead (default 1)
 %
@@ -68,6 +63,106 @@ function h = mv_plot_result(result, varargin)
 % h        - struct with handles to the graphical elements 
 
 % (c) matthias treder
+
+
+n_metrics               = result.n_metrics;
+
+if n_metrics == 1
+    result.metric   = {result.metric};
+    result.perf     = {result.perf};
+    result.perf_std = {result.perf_std};
+    result.perf_dimension_names = {result.perf_dimension_names};
+end
+
+% Parse any key-value pairs
+opt = mv_parse_key_value_pairs(varargin{:});
+if ~isfield(opt,'new_figure'), opt.new_figure = 1; end
+
+for mm=1:n_metrics
+    
+    if opt.new_figure, figure, else, clf; end
+
+    p = result.plot{mm};
+    metric                  = result.metric{mm};
+    perf                    = result.perf{mm};
+    perf_std                = result.perf_std{mm};
+    switch(p.plot_type)
+        case 'confusion_matrix'     % ----- CONFUSION MATRIX -----
+            n_classes = result.n_classes;
+            imagesc(perf)
+            colorbar
+            h.xlabel(mm) = xlabel(p.xlabel, p.label_options{:});
+            h.ylabel(mm) = ylabel(p.ylabel, p.label_options{:});
+            set(gca,'Xtick',1:n_classes,'Ytick',1:n_classes)
+            for rr=1:n_classes
+                for cc=1:n_classes
+                    text(cc,rr, sprintf('%0.2f',perf(rr,cc)), p.text_options{:})
+                end
+            end
+            h.title(mm) = title(p.title, p.title_options{:});
+
+        case 'bar'                  % ----- BAR PLOT -----
+            n_bars = p.n_bars;
+            
+            h.bar = bar(1:n_bars, perf');
+            hold on
+            set(gca,'XTick',1:n_bars, 'XTickLabel', p.xticklabel)
+            % Indicate SEM if the bars are not grouped
+            errorbar(1:n_bars, perf', perf_std', p.errorbar_options{:})
+            
+            h.ylabel(mm) = ylabel(p.ylabel, p.label_options{:});
+            h.title     = title(p.title);
+            grid on
+            
+        case 'line'                 % ----- LINE PLOT -----
+            if (nargin > 1) && ~ischar(varargin{1}),    x = varargin{1};
+            else,         x = 1:length(perf);
+            end
+            
+            h.plot(mm) = mv_plot_1D(x, perf, perf_std, 'hor', p.hor);
+            h.xlabel(mm) = xlabel(p.xlabel, p.label_options{:});
+            h.ylabel(mm) = ylabel(p.ylabel, p.label_options{:});
+            if p.add_legend, legend(p.legend_labels, p.legend_options{:}), end
+            h.title(mm) = title(p.title, p.title_options{:});
+
+        case 'image'                % ----- IMAGE -----
+            % settings for 2d plot
+            cfg= [];
+            if (nargin > 1) && ~ischar(varargin{1}), cfg.x = varargin{1};
+            else, cfg.x = 1:size(result{1}.perf,1);
+            end
+            if (nargin > 2) && ~ischar(varargin{2}), cfg.y = varargin{2};
+            else, cfg.y = 1:size(result{1}.perf,2);
+            end
+            cfg.climzero = p.climzero;
+            
+            if strcmp(metric,'dval')
+                % dval: create figure each class
+                hs = cell(1,2);
+                for cl=1:2
+                    figure
+                    cfg.title = strcat(opt.title, ' - ' ,opt.label, ' (class ', num2str(cl),')');
+                    hs{cl} = mv_plot_2D(cfg, squeeze(perf(:,cl,:,:)) );
+                end
+                h = [hs{:}];
+                
+            else
+                cfg.title = strcat(opt.title, '-' ,opt.label);
+                h = mv_plot_2D(cfg, perf);
+            end
+            
+            set(get(h(ii).colorbar,'title'),'String',metric)
+            
+
+    end
+end
+
+
+
+
+return
+
+%%
 
 if ~iscell(result), result = {result}; end
 
@@ -114,10 +209,6 @@ if any(idx) && any(ismember(incompatible_metric_function{idx,2}, result{1}.funct
     error('mv_plot_result does not currently support the metric ''%s'' for results from %s', incompatible_metric_function{idx,1}, result{1}.function)
 end
 
-%% Parse any key-value pairs
-opt = mv_parse_key_value_pairs(varargin{:});
-
-if ~isfield(opt,'new_figure'), opt.new_figure = 1; end
 
 %% Extract all performance measures into a matrix
 perf = cellfun( @(res) res.perf, result, 'Un', 0);
