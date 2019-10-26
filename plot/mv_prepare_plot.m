@@ -3,7 +3,7 @@ function result = mv_prepare_plot(result, varargin)
 % instructions for mv_plot_result (eg type of plot, labels for the axes).
 %
 %Usage:
-% result = mv_prepare_plot(result)
+% result = mv_prepare_plot(result, <x, y>)
 %
 %Parameters:
 % result            - results struct obtained from one of the
@@ -15,75 +15,98 @@ function result = mv_prepare_plot(result, varargin)
 
 % (c) matthias treder
 
-metric                  = result.metric;
-perf                    = result.perf;
-perf_std                = result.perf_std;
-perf_dimension_names    = result.perf_dimension_names;
-n_metrics               = result.n_metrics;
+tmp = [];
+tmp.metric                  = result.metric;
+tmp.perf                    = result.perf;
+tmp.perf_std                = result.perf_std;
+tmp.perf_dimension_names    = result.perf_dimension_names;
+n_metrics                   = result.n_metrics;
 
 if n_metrics == 1
-    metric   = {metric};
-    perf     = {perf};
-    perf_std = {perf_std};
-    perf_dimension_names = {perf_dimension_names};
+    tmp.metric   = {tmp.metric};
+    tmp.perf     = {tmp.perf};
+    tmp.perf_std = {tmp.perf_std};
+    tmp.perf_dimension_names = {tmp.perf_dimension_names};
 end
 
 plt = cell(n_metrics);
+class_labels = strcat({'class ' }, arrayfun(@(x) {num2str(x)}, 1:result.n_classes));
 
 for mm = 1:n_metrics
     
+    metric      = tmp.metric{mm};
+    perf        = tmp.perf{mm};
+    perf_std    = tmp.perf_std{mm};
+    perf_dimension_names = tmp.perf_dimension_names{mm};
+    
     % number of data dimensions (excluding the metric in case it is
     % multi-dimensional like dval and confusion)
-    result_dimensions = numel(setdiff(perf_dimension_names{mm},'metric'));
+    result_dimensions = numel(setdiff(perf_dimension_names,'metric'));
     
     p = [];
-    switch(result_dimensions)
-        case 0      %%% --- BAR PLOT ---
-            p.type = 'bar';
-            p.ylabel = metric{mm};
-        case 1      %%% --- LINE PLOT ---
-            p.type      = 'line';
-            p.xlabel    = perf_dimension_names{1};
-        case 2      %%% --- IMAGE PLOT ---
-            p.type = 'image';
-        otherwise   %%% --- HIGH DIMENSIONAL ---
+    p.title = '';
+
+    if strcmp(metric,'confusion')     %%% --- for CONFUSION MATRIX ---
+        if result_dimensions == 0
+            p.plot_type = 'confusion_matrix';
+        else
+            p.plot_type = 'interactive';
+        end
+        p.xlabel = 'Predicted class';
+        p.ylabel = 'True class';
+        p.title  = 'Confusion matrix';
+            
+    else
+        switch(result_dimensions)
+            case 0      %%% --- for BAR PLOT ---
+                p.plot_type = 'bar';
+                p.ylabel    = metric;
+                p.n_bars    = numel(perf);
+                if p.n_bars == result.n_classes
+                    p.xticklabel = class_labels;
+                else
+                    p.xticklabel = '';
+                end
+                
+            case 1      %%% --- for LINE PLOT ---
+                p.plot_type     = 'line';
+                p.xlabel        = perf_dimension_names{1};
+                p.ylabel        = metric{mm};
+                p.add_legend    = strcmp(metric{mm},'dval');
+                p.legend_labels = class_labels;
+                
+            case 2      %%% --- for IMAGE PLOT ---
+                p.plot_type = 'image';
+                p.ylabel        = perf_dimension_names{1};
+                p.xlabel        = perf_dimension_names{end};
+                
+                %%% TODO ...
+                
+            otherwise   %%% --- for HIGH DIMENSIONAL ---
+                p.plot_type = 'interactive';
+        end
     end
     
-    % current plot
-    p = [];
-    p.warning = '';
-    p.title = '';
+    % Add options for graphical elements
+    p.text_options = {'Fontsize',15,'HorizontalAlignment','center'};
+    p.legend_options = {'Interpreter','none'};
+    p.label_options = {'Fontsize', 14};
+    p.title_options = {'Fontsize', 16, 'Fontweight', 'bold'};
+    p.errorbar_options = {'Color' 'k' 'LineWidth' 1.5};
     
-    % different types of plots are required for different metrics
-    switch metric{mm}
-        
-        case {'acc' 'accuracy' 'auc' 'tval' 'f1' 'precision' 'recall' 'kappa'}
-            p.legend = 0;
-            p.legend_label = {};
-            if strcmp(metric{mm}, 'tval')
-                p.y_zero = 0;
-            else
-                p.y_zero = 0.5; 
-            end
-            if nd==0
-                p.ylabel = metric{mm};
-                p.type = 'bar';
-            elseif nd==1
-                p.ylabel = metric{mm};
-                p.type = 'line';
-                p.xlabel = dimension_names{1};
-            elseif nd==2
-                p.type = 'image';
-                p.xlabel = dimension_names{1};
-                p.ylabel = dimension_names{2};
-                p.colorbar_label =  metric{mm};
-            else 
-                % what to do with higher-dimensional data?
-            end
-
-        case 'confusion'
-        case 'dval'
-    end    
+    % metric-specific settings
+    switch(metric)
+        case {'auc', 'acc','accuracy','precision','recall','f1'}
+            p.hor = 1 / result.n_classes;
+        otherwise
+            p.hor = 0;     
+    end
+    p.climzero = p.hor;
+    
+    % current plot
+    p.warning = '';
+    
+  
     plt{mm} = p;
 end
 
