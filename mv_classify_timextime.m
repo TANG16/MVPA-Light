@@ -271,7 +271,7 @@ for mm=1:n_metrics
     else
         [perf{mm}, perf_std{mm}] = mv_calculate_performance(cfg.metric{mm}, cfg.output_type, cf_output, testlabel, avdim);
         % performance dimension names
-        perf_dimension_names{mm} = [cfg.dimension_names(end) repmat({'metric'}, 1, ndims(perf{mm})-2) cfg.dimension_names(end)];
+        perf_dimension_names{mm} = [{['train ' cfg.dimension_names{end}]} repmat({'metric'}, 1, ndims(perf{mm})-2) {['test ' cfg.dimension_names{end}]}];
     end
 end
 if cfg.feedback, fprintf('finished\n'), end
