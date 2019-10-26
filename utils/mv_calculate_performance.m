@@ -329,7 +329,7 @@ switch(metric)
             perf(dim_skip_token{:},xx) = cellfun( @(ypred,ytrue) 1 - var(ypred - ytrue)./var(ytrue) , model_output(dim_skip_token{:},xx), y, 'Un', 0);
         end
         
-    otherwise, error('Unknown metric: %s',cfg.metric)
+    otherwise, error('Unknown metric: %s', metric)
 end
 
 % Convert cell array to matrix. Since each cell can also contain a multi-
