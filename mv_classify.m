@@ -423,7 +423,14 @@ for mm=1:n_metrics
         if isvector(perf{mm})
             perf_dimension_names{mm} = cfg.dimension_names(search_dim);
         else
-            perf_dimension_names{mm} = [cfg.dimension_names(search_dim) repmat({'metric'}, 1, ndims(perf{mm})-numel(search_dim)-numel(gen_dim)) cfg.dimension_names(gen_dim)];
+            if ~isempty(gen_dim)
+                ix_gen_in_search_dim = find(search_dim == gen_dim);
+                names = cfg.dimension_names(search_dim);
+                names{ix_gen_in_search_dim} = ['train ' names{ix_gen_in_search_dim}];
+                perf_dimension_names{mm} = [names repmat({'metric'}, 1, ndims(perf{mm})-numel(search_dim)-numel(gen_dim)) {['test ' cfg.dimension_names{gen_dim}]}];
+            else
+                perf_dimension_names{mm} = [cfg.dimension_names(search_dim) repmat({'metric'}, 1, ndims(perf{mm})-numel(search_dim)-numel(gen_dim)) cfg.dimension_names(gen_dim)];
+            end
         end
     end
 end
@@ -439,6 +446,7 @@ end
 result = [];
 if nargout>1
    result.function              = mfilename;
+   result.task                  = 'classification';
    result.perf                  = perf;
    result.perf_std              = perf_std;
    result.perf_dimension_names  = perf_dimension_names;

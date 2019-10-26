@@ -197,6 +197,7 @@ end
 result = [];
 if nargout>1
    result.function              = mfilename;
+   result.task                  = 'classification';
    result.perf                  = perf;
    result.perf_std              = perf_std;
    result.metric                = cfg.metric;

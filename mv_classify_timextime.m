@@ -286,6 +286,7 @@ end
 result = [];
 if nargout>1
    result.function              = mfilename;
+   result.task                  = 'classification';
    result.perf                  = perf;
    result.perf_std              = perf_std;
    result.perf_dimension_names  = perf_dimension_names;
@@ -295,6 +296,7 @@ if nargout>1
    else
        result.n                 = size(X,1);
    end
+   result.n_metrics             = n_metrics;
    result.n_classes             = n_classes;
    result.classifier            = cfg.classifier;
    result.cfg                   = cfg;

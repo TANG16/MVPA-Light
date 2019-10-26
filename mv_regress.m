@@ -442,9 +442,11 @@ end
 result = [];
 if nargout>1
    result.function              = mfilename;
+   result.task                  = 'regression';
    result.perf                  = perf;
    result.perf_std              = perf_std;
    result.perf_dimension_names  = perf_dimension_names;
+   result.n_metrics             = n_metrics;
    result.metric                = cfg.metric;
    result.model                 = cfg.model;
    result.cfg                   = cfg;
