@@ -5,11 +5,11 @@ function h = mv_plot_1D(varargin)
 %Usage: Two possible usages, either giving additional parameters in a cfg
 %       struct (with cfg.key1 = value1) or directly giving the key-value 
 %       pairs as parameters:
-% ax = mv_plot_1D(cfg, time, dat, err)
-% ax = mv_plot_1D(time, dat, err, key1, value1, key2, value2, ...)
+% ax = mv_plot_1D(cfg, xval, dat, err)
+% ax = mv_plot_1D(xval, dat, err, key1, value1, key2, value2, ...)
 %
 %Parameters:
-% time              - [N x 1] vector of times representing the x-axis
+% xval              - [N x 1] vector of values representing the x-axis
 % dat               - [N x M] data matrix with results. Plots M lines of
 %                     length M
 % err               - [N x M] data matrix specifying errorbars (optional) 
@@ -40,20 +40,20 @@ function h = mv_plot_1D(varargin)
 % Returns:
 % h        - struct with handles to the graphical elements 
 
-% (c) Matthias Treder 2017-2018
+% (c) Matthias Treder
 
 has_errorbar = 0;
 
 if isstruct(varargin{1}) || isempty(varargin{1})
     % Additional parameters are specified in struct cfg
     cfg = varargin{1};
-    time = varargin{2};
+    xval = varargin{2};
     dat = varargin{3};
     if nargin < 4, 	err = []; 
     else,           err = varargin{4}; end
 else
     % Additional parameters are given as key-value pairs
-    time = varargin{1};
+    xval = varargin{1};
     dat = varargin{2};
     if nargin < 3, 	err = []; 
     else,           err = varargin{3}; end
@@ -86,10 +86,10 @@ if has_errorbar
     % We use boundedline to plot the error as well
     tmp = zeros( size(err,1), 1, size(err,2));
     tmp(:,1,:) = err;
-    [h.plt, h.patch] = boundedline(time, dat, tmp, cfg.bounded{:});
+    [h.plt, h.patch] = boundedline(xval, dat, tmp, cfg.bounded{:});
 else
     % Ordinary plot without errorbars
-    h.plt = plot(time, dat);
+    h.plt = plot(xval, dat);
 end
 
 %% Set line styles
@@ -99,7 +99,7 @@ end
 
 %% Mark zero line
 if ~isempty(cfg.cross)
-    if time(1)<0 && time(end)>0 && ~isempty(cfg.ver)
+    if xval(1)<0 && xval(end)>0 && ~isempty(cfg.ver)
         % vertical zero line
         hold on
         yl = ylim(gca);
@@ -125,6 +125,6 @@ title(cfg.title,'Interpreter','none');
 grid(h.ax, cfg.grid{:})
 
 %% Set xlim
-xlim([time(1) time(end)])
+xlim([xval(1) xval(end)])
 
 
