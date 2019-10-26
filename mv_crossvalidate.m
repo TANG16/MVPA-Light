@@ -66,10 +66,10 @@ mv_set_default(cfg,'sample_dimension',1);
 mv_set_default(cfg,'preprocess',{});
 mv_set_default(cfg,'preprocess_param',{});
 
-[cfg, clabel, nclasses, nmetrics] = mv_check_inputs(cfg, X, clabel);
+[cfg, clabel, n_classes, n_metrics] = mv_check_inputs(cfg, X, clabel);
 
 % Number of samples in the classes
-n = arrayfun( @(c) sum(clabel==c) , 1:nclasses);
+n = arrayfun( @(c) sum(clabel==c) , 1:n_classes);
 
 % indicates whether the data represents kernel matrices
 mv_set_default(cfg,'is_kernel_matrix', isfield(cfg.hyperparameter,'kernel') && strcmp(cfg.hyperparameter.kernel,'precomputed'));
@@ -143,10 +143,10 @@ end
 
 %% Calculate performance metrics
 if cfg.feedback, fprintf('Calculating performance metrics... '), end
-perf = cell(nmetrics, 1);
-perf_std = cell(nmetrics, 1);
-perf_dimension_names = cell(nmetrics, 1);
-for mm=1:nmetrics
+perf = cell(n_metrics, 1);
+perf_std = cell(n_metrics, 1);
+perf_dimension_names = cell(n_metrics, 1);
+for mm=1:n_metrics
     if strcmp(cfg.metric{mm},'none')
         perf{mm} = cf_output;
         perf_std{mm} = [];
@@ -162,7 +162,7 @@ for mm=1:nmetrics
 end
 if cfg.feedback, fprintf('finished\n'), end
 
-if nmetrics==1
+if n_metrics==1
     perf = perf{1};
     perf_std = perf_std{1};
     perf_dimension_names = perf_dimension_names{1};
@@ -177,6 +177,7 @@ if nargout>1
    result.perf_dimension_names  = perf_dimension_names;
    result.metric                = cfg.metric;
    result.n                     = size(X,1);
+   result.n_metrics             = n_metrics;
    result.n_classes             = n_classes;
    result.classifier            = cfg.classifier;
    result.cfg                   = cfg;
