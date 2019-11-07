@@ -131,12 +131,29 @@ switch(model)
         mv_set_default(param,'lambda',1);
         mv_set_default(param,'k',5);
         mv_set_default(param,'plot',0);
-        mv_set_default(param,'evtol',10^8);
-        mv_set_default(param,'kernel','linear');
+        mv_set_default(param,'kernel','rbf');
         % parameters for specific kernels
         mv_set_default(param,'gamma','auto'); % RBF and polynomial kernel
         mv_set_default(param,'coef0',1);    % polynomial kernel
         mv_set_default(param,'degree',3);   % degree of polynomial kernel
 
+    case 'svr'  
+        % note: uses the same libary as 'libsvm' just default parameters
+        % for svm_type is different 
+        mv_set_default(param,'svm_type',3);
+        mv_set_default(param,'kernel','rbf');
+        mv_set_default(param,'degree',3);
+        mv_set_default(param,'gamma',[]); % default is 1/numFeatures but since we don't know the features we set it to empty here [it's taken care of in LIBSVM then]
+        mv_set_default(param,'coef0',0);
+        mv_set_default(param,'cost',1);
+        mv_set_default(param,'nu',0.5);
+        mv_set_default(param,'epsilon',0.1);
+        mv_set_default(param,'cachesize',100);
+        mv_set_default(param,'eps',0.001);
+        mv_set_default(param,'shrinking',1);
+        mv_set_default(param,'probability_estimates',0);
+        mv_set_default(param,'weight',1);
+        mv_set_default(param,'cv',[]);
+        mv_set_default(param,'quiet',1);
     otherwise, error('Unknown model ''%s''',model)
 end
