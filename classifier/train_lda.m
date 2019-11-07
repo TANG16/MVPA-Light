@@ -156,7 +156,7 @@ elseif strcmp(form, 'dual')
     % Since the regularization target above is K, N is generally still
     % ill-conditioned. Here we fix this here by adding a little bit of an
     % identity matrix
-    N = N + trace(N) * param.lambda_n * eye(n)/n;
+    N = N + param.lambda_n * trace(N) * eye(n)/n;
 
     %% M: "Dual" of class means
     Mu1 = mean( K(:, ix1), 2);
