@@ -39,7 +39,7 @@ prop = [];
 scale = 0.0001;
 do_plot = 0;
 
-[X_gauss,clabel_gauss] = simulate_gaussian_data(nsamples, nfeatures, nclasses, prop, scale, do_plot);
+[X,clabel] = simulate_gaussian_data(nsamples, nfeatures, nclasses, prop, scale, do_plot);
 
 % Get classifier params
 param = mv_get_hyperparameter('liblinear');
@@ -66,7 +66,7 @@ predlabel = test_liblinear(cf, X);
 %% check classifier on multi-class spiral data: linear classifier should be near chance
 
 % Create spiral data
-N = 1000;
+N = 5000;
 nrevolutions = 2;       % how often each class spins around the zero point
 nclasses = 2;
 prop = 'equal';
@@ -85,3 +85,38 @@ tol = 0.04;
 
 % close to chance?
 print_unittest_result('classif spiral data',1/nclasses, acc_linear, tol);
+
+% %% N >> P: primal version should be faster to train than dual
+% ==> this is not the case (as some tests showed), the relative efficiency 
+% of primal/dual is not simply determined by the fraction N/P
+%
+% X = [X_spiral, X_spiral]; % make 4 features out of 2
+% param_primal = mv_get_hyperparameter('liblinear');
+% param_dual   = mv_get_hyperparameter('liblinear');
+% param_primal.form   = 'primal';
+% param_dual.form     = 'dual';
+% 
+% for model = {'logreg', 'svm', 'svr'}
+% %     param_primal.type = model{:};
+% %     param_dual.type = model{:};
+%     tic,train_liblinear(param_primal, X, clabel_spiral); time_primal = toc;
+%     tic,train_liblinear(param_dual,   X, clabel_spiral); time_dual = toc;
+%     print_unittest_result(sprintf('[N>>P] %s primal train time < dual train time', model{:}), true, time_primal < time_dual, tol);
+% end
+% 
+% %% P >> N: dual version should be faster to train than primal
+% param_primal = mv_get_hyperparameter('liblinear');
+% param_dual   = mv_get_hyperparameter('liblinear');
+% param_primal.form   = 'primal';
+% param_dual.form     = 'dual';
+% 
+% cl = [1,2,1,2]';
+% 
+% for model = {'logreg', 'svm', 'svr'}
+%     param_primal.type = model{:};
+%     param_dual.type = model{:};
+%     tic,train_liblinear(param_primal, X', cl); time_primal = toc;
+%     tic,train_liblinear(param_dual,   X', cl); time_dual = toc;
+%     print_unittest_result(sprintf('[N>>P] %s primal train time < dual train time', model{:}), true, time_primal > time_dual, tol);
+% end
+
