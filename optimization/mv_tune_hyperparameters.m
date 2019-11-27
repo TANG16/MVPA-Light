@@ -1,9 +1,9 @@
-function mv_tune_hyperparameters(param, X, y, train_fun, test_fun, eval_fun, tune_fields, k, is_kernel_matrix)
-% Generic hyperparameter tuning function. To this end, cross-validation is 
-% run using a search grid. 
+function param = mv_tune_hyperparameters(param, X, y, train_fun, test_fun, eval_fun, tune_params, k, is_kernel_matrix)
+% Generic hyperparameter tuning function using a search grid with
+% cross-validation.
 %
 % Usage:
-% ix = mv_tune_hyperparameters(param, X, y, train_fun, test_fun, tune_fields)
+% ix = mv_tune_hyperparameters(param, X, y, train_fun, test_fun, tune_params)
 %
 %Parameters:
 % param          - struct with hyperparameters for the classifier/model
@@ -17,63 +17,62 @@ function mv_tune_hyperparameters(param, X, y, train_fun, test_fun, eval_fun, tun
 %                  that we are looking for MAXIMA of the evaluation
 %                  function, so for error metrics such as MSE one should
 %                  provide -MSE instead.
-% tune_fields    - cell array specifying which fields of param contain
-%                  hyperparameters to be tuned
-% k              - number of folds for cross-validation
+% tune_params    - cell array specifying which hyperparameters need to be tuned
+% k              - number of folds for nested cross-validation
 % is_kernel_matrix - indicates whether X is a kernel matrix
 %
 % Returns:
-% ix             - a vector of indices for the best 
+% param          - updated param struct with best hyperparameters selected
 
-% Loop through all lambdas
+% Init variables
+if nargin<9, is_kernel_matrix = 0; end
 
-N = size(X,1);
-CV = cvpartition(N,'KFold', k);
-metric = zeros(numel(param.lambda),1);  % sum of squared errors
 
-for ff=1:param.k
-    X_train = X(CV.training(ff),:);
-    Y_train = Y(CV.training(ff),:);
-    
-    m = mean(X_train);
-    X_train = X_train - repmat(m, [size(X_train,1) 1]);
+% CV partition object for cross-validation
+CV = cvpartition(size(X,1),'KFold', k);
 
-    % Loop through lambdas
-    for ll=1:numel(param.lambda)
-        lambda = param.lambda(ll);
-        
-        %%% TRAIN
-        % Perform regularization and calculate weights
-        if strcmp(form, 'primal')
-            w = (X_train'*X_train + lambda * eye(P)) \ (X_train' * Y_train);   % primal
-        else
-            w = X_train' * ((X_train*X_train' + lambda * eye(N)) \ Y_train);   % dual
-        end
-        
-        % Estimate intercept
-        b = mean(Y_train) - m*w; % m*w makes sure that we do not need to center the test data
-        
-        %%% TEST
-        Y_hat = X(CV.test(ff),:) * w + b;
-        
-        MSE(ll) = sum(sum( (Y(CV.test(ff),:) - Y_hat).^2 ));
+% Extract values for all hyperparameters that should be tuned
+n_tune_fields = numel(tune_params);
+tune_values = cellfun( @(f) param.(f), tune_params, 'Un', 0);
+tune_indices = cellfun( @(v) arrayfun(@(x) {x}, 1:numel(v)), tune_values, 'Un', 0);
+
+% Compute search grid by producing all combinations of hyperparameters
+search_grid = allcomb(tune_indices{:});
+% ixcomb = cellfun(@(x) 1:numel(x), tune_kernel_parameters(2:2:end), 'Un', 0);
+% kernel_comb_ix = allcomb(ixcomb{:});
+
+% keeps the 
+eval_values = zeros(size(search_grid, 1), 1);
+
+tmp_param = param;
+
+% --search grid
+for ix=1:size(search_grid,1)       
+
+    % Set hyperparameters according to current iteration
+    for t=1:n_tune_fields
+        tmp_param.(tune_params{t}) = param.(tune_params{t})(search_grid{ix,t});
     end
     
+    for f=1:k        % --- CV folds
+        % Get train and test data
+        [X_train, y_train, X_test, y_test] = mv_select_train_and_test_data(X, y, CV.training(f), CV.test(f), is_kernel_matrix);
+
+        % Train model
+        model = train_fun(tmp_param, X_train, y_train);
+        
+        % Test model
+        y_pred = test_fun(model, X_test);
+        
+        % Get value for evaluation function
+        eval_values(ix) = eval_values(ix) + eval_fun(y_test, y_pred);
+    end
 end
 
-MSE = MSE / N;
+% determine best hyperparameters
+[~, max_ix] = max(eval_values);
 
-[~, ix] = min(MSE);
-lambda = param.lambda(ix);
-
-% Diagnostic plot if requested
-if param.plot
-
-    % Plot cross-validated classification performance
-    figure
-    semilogx(param.lambda, MSE)
-    title([num2str(param.k) '-fold cross-validation error'])
-    hold all
-    plot([lambda, lambda],ylim,'r--'),plot(lambda, MSE(ix),'ro')
-    xlabel('Lambda'),ylabel('MSE')
+% Set best hyperparameter
+for t=1:n_tune_fields
+    param.(tune_params{t}) = param.(tune_params{t})(search_grid{max_ix,t});
 end

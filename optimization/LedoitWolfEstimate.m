@@ -53,14 +53,24 @@ elseif strcmp(form, 'dual')
     % Gram matrix
     G = X*X';
     
-    traceG2 = trace((G/n)^2);
+    traceG2 = trace(G^2);
     
     % numerator: rewrite the Chen formula SUM_i ||xi xi' - S||_F^2, this yields
-    numer = n * traceG2 + sum(diag(G).^2) - 2 * sum(sum(G.^2))/n;
+    numer = traceG2/n + sum(diag(G).^2) - 2 * sum(sum(G.^2))/n;
     
     % denominator: same as for primal just replace S by G
-    denom = n^2 * (traceG2 - trace(G/n)^2 / p);
+    denom = traceG2 - trace(G)^2 / p;
     lambda = numer/denom;
+
+    % previous version: slightly rewritten
+    %     traceG2 = trace((G/n)^2);
+%     
+%     % numerator: rewrite the Chen formula SUM_i ||xi xi' - S||_F^2, this yields
+%     numer = n * traceG2 + sum(diag(G).^2) - 2 * sum(sum(G.^2))/n;
+%     
+%     % denominator: same as for primal just replace S by G
+%     denom = n^2 * (traceG2 - trace(G/n)^2 / p);
+%     lambda = numer/denom;
 
 end
 
