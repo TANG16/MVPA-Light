@@ -84,7 +84,7 @@ function [perf, result, testlabel] = mv_classify(cfg, X, clabel)
 %
 % CROSS-VALIDATION parameters:
 % .cv           - perform cross-validation, can be set to 'kfold',
-%                 'leaveout', 'holdout', or 'none' (default 'kfold')
+%                 'leaveout', 'holdout', 'leavegroupout' or 'none' (default 'kfold')
 % .k            - number of folds in k-fold cross-validation (default 5)
 % .p            - if cv is 'holdout', p is the fraction of test samples
 %                 (default 0.1)
@@ -265,7 +265,7 @@ if ~strcmp(cfg.cv,'none')
         if cfg.feedback, fprintf('Repetition #%d. Fold ',rr), end
         
         % Define cross-validation
-        CV = mv_get_crossvalidation_folds(cfg.cv, clabel, cfg.k, cfg.stratify, cfg.p);
+        CV = mv_get_crossvalidation_folds(cfg.cv, clabel, cfg.k, cfg.stratify, cfg.p, cfg.group);
         
         for kk=1:CV.NumTestSets                      % ---- CV folds ----
             if cfg.feedback, fprintf('%d ',kk), end
@@ -451,6 +451,7 @@ if nargout>1
    result.perf_std              = perf_std;
    result.perf_dimension_names  = perf_dimension_names;
    result.metric                = cfg.metric;
+   result.n                     = size(X, 1);
    result.n_metrics             = n_metrics;
    result.n_classes             = n_classes;
    result.classifier            = cfg.classifier;

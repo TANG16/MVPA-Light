@@ -57,7 +57,7 @@ function [perf,result] = mv_searchlight(cfg, X, clabel)
 %
 % CROSS-VALIDATION parameters:
 % .cv           - perform cross-validation, can be set to 'kfold',
-%                 'leaveout', 'holdout', or 'none' (default 'kfold')
+%                 'leaveout', 'holdout', 'leavegroupout' or 'none' (default 'kfold')
 % .k            - number of folds in k-fold cross-validation (default 5)
 % .p            - if cv is 'holdout', p is the fraction of test samples
 %                 (default 0.1)

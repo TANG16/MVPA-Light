@@ -38,7 +38,7 @@ function [perf, result, testlabel] = mv_classify_timextime(cfg, X, clabel, X2, c
 %
 % CROSS-VALIDATION parameters:
 % .cv           - perform cross-validation, can be set to 'kfold',
-%                 'leaveout', 'holdout', or 'none' (default 'kfold')
+%                 'leaveout', 'holdout', 'leavegroupout' or 'none' (default 'kfold')
 % .k            - number of folds in k-fold cross-validation (default 5)
 % .p            - if cv is 'holdout', p is the fraction of test samples
 %                 (default 0.1)
@@ -132,7 +132,7 @@ if ~strcmp(cfg.cv,'none') && ~hasX2
         if cfg.feedback, fprintf('Repetition #%d. Fold ',rr), end
         
         % Define cross-validation
-        CV = mv_get_crossvalidation_folds(cfg.cv, clabel, cfg.k, cfg.stratify, cfg.p);
+        CV = mv_get_crossvalidation_folds(cfg.cv, clabel, cfg.k, cfg.stratify, cfg.p, cfg.group);
         
         for kk=1:CV.NumTestSets                      % ---- CV folds ----
             if cfg.feedback, fprintf('%d ',kk), end
