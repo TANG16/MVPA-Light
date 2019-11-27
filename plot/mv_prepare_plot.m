@@ -101,7 +101,7 @@ for mm = 1:n_metrics
                 p.colorbar_location = 'EastOutside';
                 p.global_clim       = 1;
                 
-                data_ix = find(~ismember(result.perf_dimension_names, 'metric'));
+                data_ix = find(~ismember(perf_dimension_names, 'metric'));
                 p.plot_dimensions = data_ix([1,2]);
 %                 p.interactive   = n_result_dimensions>2;
                 p.ylabel        = perf_dimension_names{p.plot_dimensions(1)};

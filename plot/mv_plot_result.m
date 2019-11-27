@@ -80,7 +80,12 @@ for mm=1:n_metrics
             set(gca,'Xtick',1:n_classes,'Ytick',1:n_classes)
             for rr=1:n_classes
                 for cc=1:n_classes
-                    text(cc,rr, sprintf('%0.2f',perf(rr,cc)), p.text_options{:})
+                    if perf(rr,cc) < 0.005 
+                        % if it would appear as a "0.00" we just plot a "0"
+                        text(cc,rr, '0', p.text_options{:})
+                    else
+                        text(cc,rr, sprintf('%0.2f',perf(rr,cc)), p.text_options{:})
+                    end
                 end
             end
             h.title(mm) = title(p.title, p.title_options{:});
