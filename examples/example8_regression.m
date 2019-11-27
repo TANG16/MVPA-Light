@@ -97,10 +97,15 @@ param = mv_get_hyperparameter('kernel_ridge');
 model = train_kernel_ridge(param, x, y);
 y_kernel_ridge = test_kernel_ridge(model, x);
 
-% Train SVR model and get predicted values 
-param = mv_get_hyperparameter('svr');
-model = train_svr(param, x, y);
-y_svr = test_svr(model, x);
+% Train SVR model and get predicted values.
+% We will use the LIBSVM toolbox here, which supports both 
+% classification (SVM) and regression (SVR).
+param = mv_get_hyperparameter('libsvm');
+
+% Set svm_type to 3 for support vector regression
+param.svm_type = 3; 
+model = train_libsvm(param, x, y);
+y_svr = test_libsvm(model, x);
 
 figure,hold on
 % plot(x,y, 'r', 'LineWidth', 2)  % true signal

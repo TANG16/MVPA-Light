@@ -81,27 +81,3 @@ cfg.n_permutations  = 500;
 stat_cluster = mv_statistics(cfg, result, dat.trial, clabel);
 
 mv_plot_result(result, dat.time, 'mask', stat_cluster.mask)
-
-
-%% --- rest TODO --- 
-%% time x time generalization
-cfg =  [];
-cfg.repeat          = 2;
-cfg.classifier      = 'lda';
-cfg.metric          = 'accuracy';
-
-[~, result_timextime] = mv_classify_timextime(cfg, dat.trial, clabel);
-
-mv_plot_result(result_timextime, dat.time)
-
-%% Binomial test
-cfg = [];
-cfg.test    = 'binomial';
-
-stat = mv_statistics(cfg, result_timextime);
-
-mv_plot_result(result_timextime, dat.time, 'mask', stat.mask)
-
-
-
-%% Cluster permutation test
