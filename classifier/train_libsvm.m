@@ -90,14 +90,15 @@ cf = [];
 if strcmp(param.kernel,'precomputed')
     % for precomputed kernels we must provide the sample number as an
     % additional column
-    cf.model = svmtrain(double(clabel(:)), [(1:size(X,1))' double(X)], libsvm_options);
+    cf.model = svmtrain(double(clabel(:)==1), [(1:size(X,1))' double(X)], libsvm_options);
 
 else
-    cf.model = svmtrain(double(clabel(:)), double(X), libsvm_options);
+    cf.model = svmtrain(double(clabel(:)==1), double(X), libsvm_options);
 end
 % note: if svmtrain crashes for you make sure that it is not being
-% overshadowed by at Matlab function of the same name ('svmtrain' was a
-% Matlab function that was later replaced by 'fitcsvm').
+% overshadowed by at Matlab function of the same name ('svmtrain' was also
+% the name of a Matlab function that has been replaced by 'fitcsvm' in
+% later versions of Matlab)
 
 % Save parameters needed for testing
 cf.kernel           = param.kernel;

@@ -22,6 +22,9 @@ else
     [clabel, ~, dval] = svmpredict(zeros(size(X,1),1), X, cf.model,'-q');
 end
 
+% clabel come as 0 and 1, need to translate back to 1 and 2
+clabel(clabel==0) = 2;
+
 % Note that dvals might be sign-reversed in some cases,
 % see http://www.csie.ntu.edu.tw/~cjlin/libsvm/faq.html#f430
 % To fix this behavior, we inspect cf.Labels: Label(1) denotes the positive 
