@@ -63,6 +63,7 @@ cfg.metric          = 'auc';
 
 cfg = [];
 cfg.test    = 'permutation';
+cfg.n_permutations = 500;
 
 stat_permutation = mv_statistics(cfg, result, dat.trial, clabel);
 
@@ -72,11 +73,17 @@ mv_plot_result(result, dat.time, 'mask', stat_permutation.mask)
 % starting from a permutation test, we can obtain a cluster permutation
 % test by setting correctm='cluster'
 cfg = [];
-cfg.test        = 'permutation';
-cfg.correctm    = 'cluster';
+cfg.test            = 'permutation';
+cfg.correctm        = 'cluster';
+cfg.clustercritval  = 0.6;
+cfg.n_permutations  = 500;
 
 stat_cluster = mv_statistics(cfg, result, dat.trial, clabel);
 
+mv_plot_result(result, dat.time, 'mask', stat_cluster.mask)
+
+
+%% --- rest TODO --- 
 %% time x time generalization
 cfg =  [];
 cfg.repeat          = 2;

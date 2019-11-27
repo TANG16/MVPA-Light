@@ -41,6 +41,7 @@ X = squeeze(mean(dat.trial(:, :, time_points), 3));
 % Set up the structure with options for mv_regress
 cfg = [];
 cfg.model   = 'ridge';               % ridge regression (inludes linear regression)
+cfg.hyperparameter.lambda = [ 0, 1, 2, 10];
 cfg.metric  = {'mse', 'mean_absolute_error'}; % can be abbreviated as 'mae'
 cfg.dimension_names = {'samples' 'channels'};
 
@@ -56,10 +57,61 @@ mv_plot_result(result)
 % Set up the structure with options for mv_regress
 cfg = [];
 cfg.model   = 'ridge';
-cfg.metric  = 'mae';                 % mean absolute error
+cfg.metric  = 'mae';                 % = mean absolute error
 cfg.dimension_names = {'samples' 'channels', 'time points'};
 
 [perf, result] = mv_regress(cfg, dat.trial, y);
 
 % ax = mv_plot_1D(dat.time, perf, result.perf_std, 'ylabel', cfg.metric)
 mv_plot_result(result, dat.time)
+
+
+%% Compare ridge regression / kernel ridge / Support Vector Regression
+% To illustrate how kernels tackle non-linear problems, we will
+% here create an 1-dimensional non-linear dataset. We will then train ridge
+% regression, kernel ridge, and Support Vector Regression (SVR) models and
+% compare them. 
+% Note: The SVR model requires an installation of LIBSVM, see
+% train_libsvm.m for details
+
+x = linspace(0, 12, 100)';
+y = -.1*x.^2 + 3*sin(x);     % SINUSOID WITH QUADRATIC TREND
+% y = 2*mod(x, 3) + 0.4 * x; % SAWTOOTH FUNCTION
+y_plus_noise  = y + randn(length(y), 1);
+
+close all
+plot(x,y, 'r', 'LineWidth', 2)
+hold on
+plot(x,y_plus_noise, 'ko')
+legend({'Signal' 'Signal plus noise'})
+title('True signal and data')
+
+% Train ridge model and get predicted values 
+param = mv_get_hyperparameter('ridge');
+model = train_ridge(param, x, y);
+y_ridge = test_ridge(model, x);
+
+% Train kernel ridge model and get predicted values 
+param = mv_get_hyperparameter('kernel_ridge');
+% param.kernel = 'polynomial';
+model = train_kernel_ridge(param, x, y);
+y_kernel_ridge = test_kernel_ridge(model, x);
+
+% Train SVR model and get predicted values 
+param = mv_get_hyperparameter('svr');
+model = train_svr(param, x, y);
+y_svr = test_svr(model, x);
+
+figure,hold on
+% plot(x,y, 'r', 'LineWidth', 2)  % true signal
+plot(x,y_plus_noise, 'ko')
+plot(x, y_ridge, 'b')   % ridge prediction
+plot(x, y_kernel_ridge, 'k')   % kernel ridge prediction
+plot(x, y_svr, 'g')   % SVR prediction
+
+legend({'Data' 'Ridge regression' 'Kernel ridge' 'SVR'})
+title('Predictions')
+
+
+
+
