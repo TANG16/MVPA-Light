@@ -1,4 +1,4 @@
-function y_hat = test_ridge(model, X)
+function y_pred = test_ridge(model, X)
 % Applies an ridge regression model to test data and outputs predicted
 % responses.
 % 
@@ -11,6 +11,6 @@ function y_hat = test_ridge(model, X)
 % X              - [samples x features] matrix of test samples
 %
 %Output:
-% y_hat          - predicted responses
+% y_pred          - predicted responses
 
-y_hat = X * model.w + model.b;
+y_pred = X * model.w + model.b;

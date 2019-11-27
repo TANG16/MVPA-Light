@@ -1,4 +1,4 @@
-function cf = train_kernel_ridge(param, X, Y)
+function model = train_kernel_ridge(param, X, Y)
 % Trains a kernel ridge regression model.
 %
 % Usage:
@@ -67,81 +67,76 @@ model = struct();
 % indicates whether kernel matrix has been precomputed
 is_precomputed = strcmp(param.kernel,'precomputed');
 
+%% Center X
+if strcmp(param.kernel, 'linear')
+    model.m = mean(X);
+    X = X - repmat(model.m, [N 1]);
+end
+
 %% Set kernel hyperparameter defaults
 if ischar(param.gamma) && strcmp(param.gamma,'auto') && ~is_precomputed
     param.gamma = 1/size(X,2);
 end
 
+%% Check if hyperparameters need to be tuned
+tune_params = {};
+tune_kernel_params = 0;
+
+if numel(param.lambda)>1, tune_params = [tune_params {'lambda'}]; end
+if ~is_precomputed
+    if numel(param.gamma)>1, tune_params = [tune_params {'gamma'}]; tune_kernel_params = 1; end
+    if numel(param.coef0)>1, tune_params = [tune_params {'coef0'}]; tune_kernel_params = 1; end
+    if numel(param.degree)>1, tune_params = [tune_params {'degree'}]; tune_kernel_params = 1; end
+end
+
+
 %% Compute kernel
+use_K = 0;
 if is_precomputed
     K = X;
-else
+    use_K = 1;
+elseif tune_kernel_params == 0
     kernelfun = eval(['@' param.kernel '_kernel']);     % Kernel function
     K = kernelfun(param, X);                            % Compute kernel matrix
+    use_K = 1;
 end
 
+%% Hyperparameter tuning
+if ~isempty(tune_params)
+    MAE = @(y, ypred) -sum(abs(y - ypred));   % - mean absolute error
+    if use_K
+        param = mv_tune_hyperparameters(param, K, Y, @train_kernel_ridge, @test_kernel_ridge, ...
+            MAE, tune_params, param.k, 1);
+    else
+        param = mv_tune_hyperparameters(param, X, Y, @train_kernel_ridge, @test_kernel_ridge, ...
+            MAE, tune_params, param.k, 0);
+    end
+    
+    % compute kernel with the optimal hyperparameters
+    kernelfun = eval(['@' param.kernel '_kernel']);     
+    K = kernelfun(param, X);                            
+end
 
-%% --- the rest ---
+%% Perform regularization and calculate weights
+alpha = (K + param.lambda * eye(N)) \ Y;
 
-% For tuning, we do not need to compute the kernel again
-tmp = param;
-tmp.kernel = 'precomputed';
+%% Set up model struct
+model.alpha         = alpha;
+model.lambda        = param.lambda;
+model.kernel        = param.kernel;
 
-%% Regularization of N
-lambda = param.lambda;
-
-if strcmp(param.reg,'shrink')
-    % SHRINKAGE REGULARIZATION
-    % We write the regularized scatter matrix as a convex combination of
-    % the N and an identity matrix scaled to have the same trace as N
-    N = (1-lambda)* N + lambda * eye(nsamples) * trace(N)/nsamples;
-
+if strcmp(param.kernel, 'linear')
+    model.w = X' * alpha;
+    model.b = mean(Y) - model.m * model.w;
 else
-    % RIDGE REGULARIZATION
-    % The ridge lambda must be provided directly as a positive number
-    N = N + lambda * eye(nsamples);
-end
-
-%% M: "Dual" of between-classes scatter matrix
-
-% Get indices of samples for each class
-cidx = arrayfun( @(c) clabel==c, 1:nclasses,'Un',0);
-
-% Get class-wise means
-Mj = zeros(nsamples,nclasses);
-for c=1:nclasses
-    Mj(:,c) = mean( K(:, cidx{c}), 2);
-end
-
-% Sample mean
-Ms = mean(K,2);
-
-% Calculate M
-M = zeros(nsamples);
-for c=1:nclasses
-    M = M + l(c) * (Mj(:,c)-Ms) * (Mj(:,c)-Ms)';
-end
-
-%% Calculate A (matrix of alpha's)
-[A,~] = eigs( N\M, nclasses-1);
-
-%% Set up classifier struct
-cf              = [];
-cf.kernel       = param.kernel;
-cf.A            = A;
-cf.nclasses     = nclasses;
-
-if ~is_precomputed
-    cf.kernelfun    = kernelfun;
-    cf.Xtrain       = X;
-end
-
-% Save projected class centroids
-cf.class_means  = Mj'*A;
-
-% Hyperparameters
-cf.gamma        = param.gamma;
-cf.coef0        = param.coef0;
-cf.degree       = param.degree;
+    if ~is_precomputed
+        model.kernelfun    = kernelfun;
+        model.X_train      = X;
+    end
+    
+    % Hyperparameters
+    model.gamma        = param.gamma;
+    model.coef0        = param.coef0;
+    model.degree       = param.degree;
     
 end

@@ -72,18 +72,19 @@ end
 
 %% Hyperparameter tuning if necessary
 if numel(param.lambda) > 1
-    tune_hyperparameter_ridge_regression;
-else
-    lambda = param.lambda;
+    
+    % tune hyperparameters using MAE as evaluation function 
+    param = mv_tune_hyperparameters(param, X, Y, @train_ridge, @test_ridge, ...
+        @(y, ypred) -sum(abs(y - ypred)), {'lambda'}, param.k);
 end
 
-model.lambda = lambda;
+model.lambda = param.lambda;
 
 %% Perform regularization and calculate weights
 if strcmp(form, 'primal')
-    model.w = (X'*X + lambda * eye(P)) \ (X' * Y);   % primal
+    model.w = (X'*X + param.lambda * eye(P)) \ (X' * Y);   % primal
 else
-    model.w = X' * ((X*X' + lambda * eye(N)) \ Y);   % dual
+    model.w = X' * ((X*X' + param.lambda * eye(N)) \ Y);   % dual
 end
 
 %% Estimate intercept
