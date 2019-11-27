@@ -1,6 +1,15 @@
 rng(42)
 tol = 10e-10;
 
+nsamples = 100;
+nfeatures = 10;
+nclasses = 2;
+prop = [];
+scale = 1;
+do_plot = 0;
+[X, clabel] = simulate_gaussian_data(nsamples, nfeatures, nclasses, prop, scale, do_plot);
+
+
 %% BINOMIAL: accuracy = 0.5 should give p=0.5 when N uneven
 cfg = [];
 cfg.test    = 'binomial';
@@ -21,6 +30,7 @@ end
 
 %% BINOMIAL: shape of stat.p should match shape of stat.perf
 result.n = 100;
+result.metric = 'acc';
 
 result.perf = rand([5, 2]);
 stat = mv_statistics(cfg, result);
@@ -58,9 +68,10 @@ cfg.n_permutations = 0;
 
 result.metric = {'kappa' 'accuracy', 'dval'}; 
 result.perf   = {-1, 0.5, 3};
+result.perf_dimension_names = {'x'};
+result.function = 'mv_classify';
 
 mv_statistics(cfg, result, X, clabel);
-
 
 %% PERMUTATION: compare separable with non-separable time points
 N = 1000;
@@ -117,3 +128,5 @@ true_mask = zeros(size(X,3));
 true_mask(1:size(X,3)/2, 1:size(X,3)/2) = 1;
 
 print_unittest_result('[cluster permutation] separable vs non-separable', true_mask, double(stat.mask), 2); % allow for 2 mismatches
+
+%% LEVEL 2 -- TODO --

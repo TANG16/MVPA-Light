@@ -37,7 +37,7 @@ end
 d = diff(nor);
 print_unittest_result('increasing lambda shrinks w', all(d<0), true, tol);
 
-%% increasing lambda should increase MSE on TRAIN data (overfitting)
+%% increasing lambda should increase MSE on TRAIN data (training fit gets worse)
 lambdas = 0:2:20;
 
 perf = zeros(numel(lambdas),1);   % norms of w's
@@ -49,7 +49,7 @@ for ii=1:numel(lambdas)
 end
 
 d = diff(perf);
-print_unittest_result('increasing lambda increases MSE on TRAIN set', all(d>0), true, tol);
+print_unittest_result('increasing lambda increases MSE on TRAIN set', true, all(d>0), tol);
 
 %% tuning lambda (just run it to make sure it doesn't crash)
 param.lambda = [10^-3, 10^-2, 10^-1, 1, 10, 10, 10^3, 10^4, 10^5, 10^6];
