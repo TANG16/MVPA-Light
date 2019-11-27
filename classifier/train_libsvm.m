@@ -1,6 +1,9 @@
-function cf = train_libsvm(param,X,clabel)
-% Trains a kernel support vector machine using LIBSVM. For installation 
-% details and further information see
+function cf = train_libsvm(param,X,y)
+% Trains a kernel support vector machine (SVM) or a support vector
+% regression (SVR) using LIBSVM. The sym_type parameter controls whether
+% classification or regression is performed, see below.
+%
+% For installation details and further information see
 % https://github.com/cjlin1/libsvm and 
 % https://www.csie.ntu.edu.tw/~cjlin/libsvm
 %
@@ -10,7 +13,8 @@ function cf = train_libsvm(param,X,clabel)
 %Parameters:
 % X              - [samples x features] matrix of training instances  -OR-
 %                  [samples x samples] kernel matrix
-% clabel         - [samples x 1] vector of class labels
+% y              - [samples x 1] vector of class labels (classification)
+%                                or responses (regression)
 %
 % param          - struct with hyperparameters passed on to LIBSVM's svmtrain
 %                  function
@@ -49,7 +53,7 @@ function cf = train_libsvm(param,X,clabel)
 % .cv : n-fold cross validation mode (default [] = no cross-validation)
 %
 %Output:
-% cf - [struct] specifying the classifier. The result of svmtrain is stored
+% cf - [struct] specifying the model. The result of svmtrain is stored
 %      in cf.model
 %
 % Reference:
@@ -87,13 +91,19 @@ end
 % Call LIBSVM training function
 cf = [];
 
+if param.svm_type < 3
+    y = double(y(:)==1);         % classification
+else
+    y = double(y(:));            % regression
+end
+
 if strcmp(param.kernel,'precomputed')
     % for precomputed kernels we must provide the sample number as an
     % additional column
-    cf.model = svmtrain(double(clabel(:)==1), [(1:size(X,1))' double(X)], libsvm_options);
-
+    cf.model = svmtrain(y, [(1:size(X,1))' double(X)], libsvm_options);
+    
 else
-    cf.model = svmtrain(double(clabel(:)==1), double(X), libsvm_options);
+    cf.model = svmtrain(y, double(X), libsvm_options);
 end
 % note: if svmtrain crashes for you make sure that it is not being
 % overshadowed by at Matlab function of the same name ('svmtrain' was also
@@ -103,4 +113,5 @@ end
 % Save parameters needed for testing
 cf.kernel           = param.kernel;
 cf.kernel_type      = param.kernel_type;
+cf.svm_type         = param.svm_type;
 
