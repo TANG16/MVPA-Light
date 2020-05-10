@@ -3,6 +3,8 @@
 rng(42)
 tol = 10e-10;
 
+% example X with duplicates for debugging:
+% X = [10 -4 ; 1 10; 40 4; 10, -20; 0 -2; -30 20; 40 2; -10 10]
 
 %% [X is a vector] check whether yields the same p-value as matlab's signrank
 X = randn(100,1)*10 + 2;
